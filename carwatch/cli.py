@@ -15,6 +15,7 @@ from .filters import MODEL_PATTERNS, SEVERE_LABEL, evaluate
 from .models import Listing
 from .parser import load_email, parse_email
 from .export import write_export
+from .site import build_site
 from .sources import attach_references, load_listings, merge_duplicates
 from .store import Store
 from .valuation import ValueModel, appraise
@@ -278,6 +279,12 @@ def main(argv=None) -> int:
     stats.add_argument("--config", default=None)
     stats.add_argument("--data-dir", default="data")
     stats.set_defaults(func=cmd_comps_stats)
+
+    site = sub.add_parser("site", help="build the static dashboard for GitHub Pages")
+    site.add_argument("--data", default="export", help="folder written by ingest --export")
+    site.add_argument("--page", default="dashboard/index.html")
+    site.add_argument("--out", default="docs")
+    site.set_defaults(func=lambda a: (print(f"site: {build_site(Path(a.page), Path(a.data), Path(a.out))}"), 0)[1])
 
     value = sub.add_parser("value", help="value one car by hand")
     value.add_argument("--model", required=True, help='for example "Toyota 86" or "BRZ"')

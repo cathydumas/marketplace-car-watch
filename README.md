@@ -138,6 +138,17 @@ python3 -m carwatch comps stats               # summarise comps and the model
 python3 -m carwatch value --model "Toyota 86" --year 2018 --km 80000 --price 19850
 ```
 
+## Dashboard
+
+The latest run is published at https://cathydumas.github.io/marketplace-car-watch/. To rebuild it after a run:
+
+```
+python3 -m carwatch ingest inbox --listings listings --export export
+python3 -m carwatch site --data export --out docs
+```
+
+Commit `docs/` and GitHub Pages serves it. The page shows listing photos and links from public listings. The repo is public, so anything in `docs/` is public too.
+
 ## Test it without Claude
 
 ```

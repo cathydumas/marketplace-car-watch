@@ -6,7 +6,7 @@ Sources:
   Facebook listings the car watch has seen, when they have year, km and price
 
 Comps come from all of Canada. A car in Ontario is a fine price reference
-even though Maggie only buys in BC.
+even though the search is for BC cars.
 """
 from __future__ import annotations
 
