@@ -91,7 +91,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
   document.addEventListener('DOMContentLoaded', function () {
     redraw();
     Promise.all(ids.map(function (id) {
-      return fetch('data/' + id + '.json').then(function (r) { return r.json(); })
+      return fetch('data/' + id + '.json?v=__BUILD__').then(function (r) { return r.json(); })
         .then(function (rows) { store[id] = { status: 'ok', data: rows }; })
         .catch(function () { store[id] = { status: 'error', data: [] }; });
     })).then(function () { redraw(); });
@@ -128,7 +128,8 @@ def build_site(dashboard_html: Path, data_dir: Path, out_dir: Path) -> Path:
         rows = json.loads(listings.read_text(encoding="utf-8"))
         if rows and rows[0].get("date"):
             date = datetime.fromisoformat(rows[0]["date"]).strftime("%B %-d, %Y")
-    html = HEAD.replace("__DATASETS__", json.dumps(DATASETS)) + page + FOOT.replace("__DATE__", date)
+    build = datetime.now().strftime("%Y%m%d%H%M%S")
+    html = HEAD.replace("__DATASETS__", json.dumps(DATASETS)).replace("__BUILD__", build) + page + FOOT.replace("__DATE__", date)
     out = out_dir / "index.html"
     out.write_text(html, encoding="utf-8")
     vendor = Path(__file__).parent / "vendor"

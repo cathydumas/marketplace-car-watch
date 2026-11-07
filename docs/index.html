@@ -73,7 +73,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
   document.addEventListener('DOMContentLoaded', function () {
     redraw();
     Promise.all(ids.map(function (id) {
-      return fetch('data/' + id + '.json').then(function (r) { return r.json(); })
+      return fetch('data/' + id + '.json?v=20261107162806').then(function (r) { return r.json(); })
         .then(function (rows) { store[id] = { status: 'ok', data: rows }; })
         .catch(function () { store[id] = { status: 'error', data: [] }; });
     })).then(function () { redraw(); });
