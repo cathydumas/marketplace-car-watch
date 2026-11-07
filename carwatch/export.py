@@ -59,6 +59,12 @@ def listing_row(listing) -> dict:
         ),
         "days_listed": listing.days_listed,
         "title_status": listing.title_status,
+        "photo_notes": "; ".join(
+            x for x in (
+                (listing.photo_check or {}).get("trim_evidence", ""),
+                (listing.photo_check or {}).get("transmission_evidence", ""),
+            ) if x
+        ),
         "seller": listing.seller_type or "",
         "status": listing.status,
         "call": listing.call,

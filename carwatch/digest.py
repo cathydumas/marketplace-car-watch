@@ -110,6 +110,10 @@ def _entry(listing) -> str:
         f"- Details: {', '.join(details) if details else 'year and km not shown'}",
         f"- Trim: {_trim_line(listing)}",
     ]
+    check = listing.photo_check or {}
+    seen = "; ".join(x for x in (check.get("trim_evidence"), check.get("transmission_evidence")) if x)
+    if seen:
+        lines.append(f"- From photos: {seen}")
     lines.extend(_value_lines(listing))
     lines.extend(_reference_lines(listing))
     lines.append(f"- Link ({source_name(listing.source)}): {listing.url}")

@@ -44,6 +44,7 @@
 .v-buy .cw-bar-you { background: #1f8a4c; } .v-offer .cw-bar-you { background: #b26a00; } .v-pass .cw-bar-you { background: #6b6f76; }
 .cw-bar-labels { display: flex; justify-content: space-between; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
 .cw-why { margin: 0; font-size: var(--cds-font-size-caption); }
+.cw-photo-note { color: var(--color-fg-muted); }
 .cw-flip { margin: 0; font-size: var(--cds-font-size-caption); padding: .5rem .7rem; border-radius: var(--cds-radius); background: color-mix(in srgb, var(--color-fg) 6%, transparent); }
 .cw-tags { display: flex; flex-wrap: wrap; gap: .35rem; }
 .cw-tag { font-size: var(--cds-font-size-caption); padding: .15rem .55rem; border-radius: 999px; border: 1px solid var(--color-border-line); }
@@ -109,6 +110,13 @@
     <div class="cw-scatter" data-draw="scatter" data-source="comps listings"></div>
   </section>
 
+  <section id="trend" class="cw-panel">
+    <h2>Price trend, month by month</h2>
+    <p>Median asking price on AutoTrader.ca across Canada, from daily snapshots that started November 7, 2026. A new point appears each month.</p>
+    <div class="cw-legend" data-draw="trend-legend" data-source="trends"></div>
+    <div class="cw-scatter" data-draw="trend" data-source="trends"></div>
+  </section>
+
   <div class="cw-cards2">
     <section class="cw-panel">
       <h2>Listings scanned today</h2>
@@ -136,6 +144,7 @@
       <dt>Offer</dt><dd>Close to market. The number is a suggested opening offer, lowered for cars that have sat for a month or more.</dd>
       <dt>Pass</dt><dd>More than 10% over similar cars, or a blown engine, a rebuilt title or similar.</dd>
       <dt>Flip check</dt><dd>Likely resale after 18 months of about 12,000 km a year, before tax, insurance and repairs.</dd>
+      <dt>From photos</dt><dd>Claude looks at each promising car's photos for trim clues (seat material, climate controls, screen, brakes, wheels), the shifter and paddles to confirm manual or automatic, and mods the ad leaves out. Photos can be stock images, so treat this as a clue, not proof.</dd>
       <dt>Title</dt><dd>Cars whose ad says rebuilt, salvage or branded are dropped. "Clean title only" shows cars whose ad or Facebook listing says clean title. A seller's word is not proof: check the ICBC or Carfax report.</dd>
       <dt>Other ratings</dt><dd>CarGurus and AutoTrader rate the asking price only. They ignore condition, mods and dealer fees.</dd>
       <dt>Not checked</dt><dd>Accident history, condition and ownership. Every car still needs a history report and a pre-purchase inspection.</dd>
@@ -251,6 +260,11 @@ dash.draw('cards', (el) => {
       meta.append(dl);
     }
     body.append(meta);
+    if (r.photo_notes) {
+      const pn = mk('p', 'cw-why cw-photo-note', 'From photos: ');
+      pn.append(mark(mk('span', null, r.photo_notes), 'photo_notes', r.id));
+      body.append(pn);
+    }
 
     if (r.fair_ask != null && r.price != null) {
       const bar = mk('div', 'cw-bar');
@@ -332,6 +346,69 @@ const barList = (name, id, key, hot) => dash.draw(name, (el) => {
 });
 barList('sources', 'sources', 'site', () => true);
 barList('filtered', 'filtered', 'reason', () => false);
+</script>
+
+<script>
+const TREND_GROUPS = ['Toyota 86 and FR-S (2013 to 2020)', 'BRZ (2013 to 2020)', 'GR86 (2022 on)', 'BRZ (2022 on)'];
+dash.draw('trend-legend', (el) => {
+  const T = dash.data('trends');
+  el.replaceChildren();
+  if (T.status !== 'ok') return;
+  TREND_GROUPS.forEach((g, i) => {
+    if (!T.data.some((r) => r.group === g)) return;
+    const s = document.createElement('span'); const dot = document.createElement('i');
+    dot.style.background = dash.colors[i]; s.append(dot, document.createTextNode(g)); el.append(s);
+  });
+});
+dash.draw('trend', (el) => {
+  const T = dash.data('trends');
+  el.replaceChildren();
+  if (T.status !== 'ok') { el.textContent = '—'; return; }
+  const rows = T.data.map((r) => ({ ...r, date: new Date(r.month + '-15T00:00:00Z') }));
+  const W = Math.max(300, el.clientWidth || 600), H = 280;
+  const m = { top: 14, right: 48, bottom: 30, left: 52 };
+  const months = [...new Set(rows.map((r) => r.month))].sort();
+  const x0 = new Date(months[0] + '-01T00:00:00Z');
+  const x1 = d3.utcMonth.offset(new Date(months[months.length - 1] + '-01T00:00:00Z'), months.length < 4 ? 4 - months.length + 1 : 1);
+  const x = d3.scaleUtc([x0, x1], [m.left, W - m.right]);
+  const y = d3.scaleLinear([d3.min(rows, (r) => r.median_price) * 0.85, d3.max(rows, (r) => r.median_price) * 1.08], [H - m.bottom, m.top]).nice();
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Median asking price by month');
+  const gx = svg.append('g').attr('transform', `translate(0,${H - m.bottom})`).call(d3.axisBottom(x).ticks(d3.utcMonth.every(1)).tickFormat(d3.utcFormat('%b %Y')));
+  const gy = svg.append('g').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.left - m.right)).tickFormat((d) => '$' + d / 1000 + 'k'));
+  for (const g of [gx, gy]) {
+    g.attr('font-size', null).attr('font-family', null);
+    g.selectAll('text').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)');
+    g.select('.domain').attr('stroke', 'var(--cds-chart-axis)');
+  }
+  gx.selectAll('.tick line').attr('stroke', 'var(--cds-chart-axis)');
+  gy.selectAll('.tick line').attr('stroke', 'var(--cds-chart-grid)');
+  gy.select('.domain').remove();
+  const tip = document.createElement('div'); tip.className = 'cw-tip'; tip.hidden = true; el.append(tip);
+  TREND_GROUPS.forEach((g, i) => {
+    const pts = rows.filter((r) => r.group === g).sort((a, b) => a.date - b.date);
+    if (!pts.length) return;
+    svg.append('path').datum(pts).attr('fill', 'none').attr('stroke', dash.colors[i]).attr('stroke-width', 2)
+      .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round')
+      .attr('d', d3.line().x((d) => x(d.date)).y((d) => y(d.median_price)));
+    svg.append('g').selectAll('circle').data(pts).join('circle')
+      .attr('cx', (d) => x(d.date)).attr('cy', (d) => y(d.median_price)).attr('r', 5)
+      .attr('fill', dash.colors[i]).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2)
+      .on('mouseenter', (ev, d) => {
+        tip.replaceChildren();
+        const a = document.createElement('div'); a.className = 't'; a.textContent = d3.utcFormat('%B %Y')(d.date);
+        const b = document.createElement('div'); b.textContent = d.group;
+        const c = document.createElement('div'); c.textContent = 'Median $' + d3.format(',')(d.median_price) + ' · ' + d3.format(',')(d.median_km) + ' km · ' + d.listings + ' cars';
+        tip.append(a, b, c); tip.hidden = false;
+        const bx = el.getBoundingClientRect(), r = ev.target.getBoundingClientRect();
+        tip.style.left = Math.max(0, Math.min(r.left - bx.left + 12, bx.width - 240)) + 'px'; tip.style.top = (r.top - bx.top + 12) + 'px';
+      })
+      .on('mouseleave', () => { tip.hidden = true; });
+    const last = pts[pts.length - 1];
+    svg.append('text').attr('x', x(last.date) + 9).attr('y', y(last.median_price) + 4)
+      .attr('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)')
+      .text('$' + d3.format('.1f')(last.median_price / 1000) + 'k');
+  });
+});
 </script>
 
 <script>

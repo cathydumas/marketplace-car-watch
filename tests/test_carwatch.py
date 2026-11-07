@@ -10,6 +10,8 @@ from carwatch.fbpage import apply_page, load_pages
 from carwatch.filters import dealer_fees, evaluate, title_status
 from carwatch.sources import attach_references, load_listings, merge_duplicates
 from carwatch.models import Listing
+from carwatch.photocheck import apply_photo_check
+from carwatch.history import load_history, trend_rows
 from carwatch.parser import load_email, parse_email
 from carwatch.store import Store
 from carwatch.trims import detect_transmission, detect_trim
@@ -362,6 +364,31 @@ class TitleTests(unittest.TestCase):
         apply_page(listing, page_with_field)
         evaluate(listing, load_config(None))
         self.assertEqual(listing.title_status, "clean")
+
+
+class PhotoAndHistoryTests(unittest.TestCase):
+    def test_photo_check_fills_trim_and_flags_conflicts(self):
+        listing = hand_listing("Toyota 86", 2018, 65000, 22889, transmission="automatic")
+        apply_photo_check(listing, {"trim": "Base", "transmission": "manual", "mods": ["aftermarket rear wing"]})
+        self.assertEqual((listing.trim, listing.trim_tier), ("Base", "base"))
+        self.assertIn("ad says automatic, photos show manual", listing.flags)
+        self.assertIn("modified", listing.flags)
+
+    def test_photo_check_agrees(self):
+        listing = hand_listing("BRZ", 2019, 43000, 18850, text="Sport-tech", transmission="automatic")
+        apply_photo_check(listing, {"trim": "Sport-tech", "transmission": "automatic"})
+        self.assertIn("automatic confirmed in photos", listing.positives)
+        self.assertFalse(any("photos suggest" in f for f in listing.flags))
+
+    def test_trend_rows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = (COMPS / "autotrader_2026-11-07.psv").read_text(encoding="utf-8")
+            Path(tmp, "autotrader-all-2026-11-07.psv").write_text(src, encoding="utf-8")
+            Path(tmp, "autotrader-all-2026-12-07.psv").write_text(src.replace("|17990|", "|16990|"), encoding="utf-8")
+            rows = trend_rows(load_history(Path(tmp)))
+            months = {r["month"] for r in rows}
+            self.assertEqual(months, {"2026-11", "2026-12"})
+            self.assertTrue(all(r["listings"] > 0 for r in rows))
 
 
 class SourceTests(unittest.TestCase):

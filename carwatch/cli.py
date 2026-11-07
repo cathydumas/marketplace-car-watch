@@ -14,7 +14,9 @@ from .fbpage import apply_page, load_pages
 from .filters import MODEL_PATTERNS, SEVERE_LABEL, evaluate
 from .models import Listing
 from .parser import load_email, parse_email
-from .export import write_export
+from .export import photo_key, write_export
+from .history import load_history, trend_rows
+from .photocheck import apply_photo_check, load_photo_checks
 from .site import build_site
 from .sources import attach_references, load_listings, merge_duplicates
 from .store import Store
@@ -99,7 +101,9 @@ def cmd_ingest(args) -> int:
         comp = comp_from_listing(listing, today.isoformat())
         if comp:
             new_comps.append(comp)
+    checks = load_photo_checks(Path(args.pages))
     for listing in kept:
+        apply_photo_check(listing, checks.get(photo_key(listing)))
         appraise(listing, model)
 
     store = Store(data_dir / "seen.json")
@@ -245,6 +249,16 @@ def cmd_value(args) -> int:
     return 0
 
 
+def cmd_trends(args) -> int:
+    comps = load_history(Path(args.history))
+    rows = trend_rows(comps)
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(rows, indent=1), encoding="utf-8")
+    print(f"trends: {len(comps)} snapshot rows, {len(rows)} month and model rows -> {out}")
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="carwatch")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -279,6 +293,11 @@ def main(argv=None) -> int:
     stats.add_argument("--config", default=None)
     stats.add_argument("--data-dir", default="data")
     stats.set_defaults(func=cmd_comps_stats)
+
+    trends = sub.add_parser("trends", help="write the monthly price trend from history snapshots")
+    trends.add_argument("--history", default="history")
+    trends.add_argument("--out", default="export/trends.json")
+    trends.set_defaults(func=cmd_trends)
 
     site = sub.add_parser("site", help="build the static dashboard for GitHub Pages")
     site.add_argument("--data", default="export", help="folder written by ingest --export")

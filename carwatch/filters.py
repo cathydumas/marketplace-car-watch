@@ -82,8 +82,6 @@ def dealer_fees(text: str) -> int:
     """Add up dealer fees the text says are charged on top of the price."""
     total = 0
     for sentence in re.split(r"(?<=[.!?\n])\s+", text or ""):
-        if not FEE_EXCLUDED_RE.search(sentence):
-            continue
         if re.search(r"\bincludes?\b", sentence, re.I) and not re.search(r"not include", sentence, re.I):
             continue
         for match in FEE_WORD_RE.finditer(sentence):

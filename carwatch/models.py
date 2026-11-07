@@ -44,6 +44,7 @@ class Listing:
     flags_extra: list = field(default_factory=list)
     dealer_fees: int = 0
     title_status: str = "unknown"  # clean, branded, unknown
+    photo_check: dict = field(default_factory=dict)
 
     def filled_fields(self) -> int:
         values = [self.title, self.price, self.location, self.year, self.km]
