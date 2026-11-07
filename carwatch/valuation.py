@@ -168,9 +168,12 @@ def appraise(listing, model: ValueModel) -> None:
     s = model.settings
     reasons = []
     listing.valuation = {}
-    if listing.flags and listing.flags[0].startswith("serious"):
+    if any(f.startswith("serious") for f in listing.flags) or listing.title_status == "branded":
         listing.call = "Pass"
-        listing.call_reasons = ["serious mechanical or title problem in the text"]
+        listing.call_reasons = [
+            "rebuilt, salvage or branded title" if listing.title_status == "branded"
+            else "serious mechanical problem in the text"
+        ]
         listing.valuation["score"] = -1.0
         return
     if not listing.year or not listing.make:

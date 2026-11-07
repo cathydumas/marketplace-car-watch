@@ -7,7 +7,7 @@ from carwatch.cli import main
 from carwatch.comps import CompStore, load_comp_file
 from carwatch.config import load_config
 from carwatch.fbpage import apply_page, load_pages
-from carwatch.filters import dealer_fees, evaluate
+from carwatch.filters import dealer_fees, evaluate, title_status
 from carwatch.sources import attach_references, load_listings, merge_duplicates
 from carwatch.models import Listing
 from carwatch.parser import load_email, parse_email
@@ -66,8 +66,11 @@ class FilterTests(unittest.TestCase):
         return evaluate(self.cards[item_id], self.cfg)
 
     def test_keeps_in_budget_bc_targets(self):
-        for item_id in ("1111111111111111", "2222222222222222", "5555555555555555"):
+        for item_id in ("1111111111111111", "2222222222222222"):
             self.assertEqual(self.reason(item_id), "", item_id)
+
+    def test_rebuilt_title_is_dropped(self):
+        self.assertEqual(self.reason("5555555555555555"), "rebuilt, salvage or branded title")
 
     def test_excludes_other_province(self):
         self.assertEqual(self.reason("3333333333333333"), "outside allowed provinces")
@@ -82,7 +85,7 @@ class FilterTests(unittest.TestCase):
         self.reason("5555555555555555")
         self.reason("2222222222222222")
         flags = self.cards["5555555555555555"].flags
-        self.assertIn("rebuilt or salvage title", flags)
+        self.assertIn("rebuilt, salvage or branded title", flags)
         self.assertIn("tune or forced induction", flags)
         self.assertIn("modified", flags)
         positives = self.cards["2222222222222222"].positives
@@ -107,7 +110,7 @@ class StoreAndCliTests(unittest.TestCase):
             ]
             self.assertEqual(main(args), 0)
             store = Store(Path(tmp) / "data" / "seen.json")
-            self.assertEqual(len(store.data), 3)
+            self.assertEqual(len(store.data), 2)
 
             cards = list(parsed_cards().values())
             kept = []
@@ -323,6 +326,42 @@ class FilterDetailTests(unittest.TestCase):
         self.assertNotIn("manual", listing.positives)
         modded = hand_listing("Toyota 86", 2020, 48000, 20500, text="after market Exhust and cold air intake")
         self.assertIn("modified", modded.flags)
+
+
+class TitleTests(unittest.TestCase):
+    def test_title_wording(self):
+        cases = {
+            "Rebuilt title, drives great": "branded",
+            "Salvage title from ICBC": "branded",
+            "status: rebuilt": "branded",
+            "previously written off": "branded",
+            "Rebuilt engine at 90k, clean title": "clean",
+            "No salvage title, never been in an accident": "clean",
+            "not a write-off": "clean",
+            "Clean Carfax": "clean",
+            "Rebuilt transmission last year": "unknown",
+            "Garage kept, summer only": "unknown",
+        }
+        for text, expected in cases.items():
+            self.assertEqual(title_status(text), expected, text)
+
+    def test_clean_only_drops_unknown(self):
+        cfg = load_config(None)
+        cfg["search"] = {**cfg["search"], "title": "clean_only"}
+        unknown = Listing(listing_id="u", url="", title="2017 Subaru BRZ", price=18000, location="Surrey, BC", year=2017)
+        clean = Listing(listing_id="c", url="", title="2017 Subaru BRZ", price=18000, location="Surrey, BC", year=2017,
+                        description="Clean title, one owner")
+        self.assertEqual(evaluate(unknown, cfg), "title status not stated")
+        self.assertEqual(evaluate(clean, cfg), "")
+        self.assertIn("clean title (seller says)", clean.positives)
+
+    def test_facebook_clean_title_field(self):
+        listing = Listing(listing_id="1005267709269383", url="")
+        apply_page(listing, load_pages(PAGES)["1775877630223040"])
+        page_with_field = {"clean_title": True}
+        apply_page(listing, page_with_field)
+        evaluate(listing, load_config(None))
+        self.assertEqual(listing.title_status, "clean")
 
 
 class SourceTests(unittest.TestCase):

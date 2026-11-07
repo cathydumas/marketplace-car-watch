@@ -92,7 +92,7 @@ def cmd_ingest(args) -> int:
     comp_store, model = _value_model(cfg, data_dir, today)
     new_comps = []
     for listing in listings:
-        if listing.flags and listing.flags[0] == SEVERE_LABEL:
+        if SEVERE_LABEL in listing.flags or listing.title_status == "branded":
             continue
         if listing.source == "autotrader":
             continue  # AutoTrader cars already come in through the comps refresh

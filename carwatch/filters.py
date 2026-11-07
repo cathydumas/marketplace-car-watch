@@ -19,11 +19,41 @@ SEVERE_PATTERN = (
     r"\b(blown|seized)\s+(engine|motor)\b|\b(engine|motor)\s+(is\s+)?(blown|seized|dead)\b|"
     r"\bneeds?\s+(an?\s+)?(new\s+)?(engine|motor|transmission|trans|clutch)\b|"
     r"\bnot running\b|\bdoes ?n[o']t run\b|\bwon'?t start\b|\bno start\b|"
-    r"\bspun bearing\b|\brod knock\b|\bparts car\b|\bfor parts\b|\bnon[- ]?runner\b|"
-    r"\b(salvage|rebuilt|branded)\s+title\b|\bwrite[- ]?off\b|\btotal loss\b"
+    r"\bspun bearing\b|\brod knock\b|\bparts car\b|\bfor parts\b|\bnon[- ]?runner\b"
 )
 SEVERE_LABEL = "serious mechanical or title problem"
 PRICE_UNCLEAR_BELOW = 2000
+
+# Title status. In BC a branded vehicle shows as Rebuilt, Salvage, Altered or
+# Non-repairable in ICBC records. "Rebuilt engine" is not a title brand.
+BRANDED_RE = re.compile(
+    r"\b(salvage|salvaged|rebuilt|rebuild|branded|altered|non[- ]?repairable|flood)\s+"
+    r"(title|status|vehicle|car|history|registration)\b|"
+    r"\b(title|status|registration)\s*(is|:|-)?\s*(salvage|rebuilt|branded|altered|non[- ]?repairable)\b|"
+    r"\b(previously|was|been)\s+(salvaged|rebuilt|written[- ]off|a write[- ]?off|declared a total loss)\b|"
+    r"\bwrite[- ]?off\b|\bwritten[- ]off\b|\btotal loss\b|\bbranded\b|\bsalvage\b",
+    re.I,
+)
+NEGATION_RE = re.compile(r"\b(no|not|never|non|without|isn't|is not|wasn't|zero)\b[\s\w-]{0,12}$", re.I)
+CLEAN_RE = re.compile(
+    r"\bclean (bc |ontario |alberta )?title\b|\btitle\s*(is|:|-)?\s*clean\b|\bnormal (status|title)\b|"
+    r"\bclean carfax\b|\bclean history\b|\bnever been (rebuilt|salvaged|written off)\b|"
+    r"\bno (salvage|rebuilt|branded|brand)\b|\bnot (a )?(salvage|rebuilt|write[- ]?off)\b",
+    re.I,
+)
+
+
+def title_status(text: str) -> str:
+    """Return "branded", "clean" or "unknown" from listing text."""
+    text = text or ""
+    for match in BRANDED_RE.finditer(text):
+        before = text[max(0, match.start() - 24):match.start()]
+        if NEGATION_RE.search(before):
+            continue
+        return "branded"
+    if CLEAN_RE.search(text):
+        return "clean"
+    return "unknown"
 
 # Titles that are parts, accessories or toys rather than a car.
 PARTS_TITLE_RE = re.compile(
@@ -73,7 +103,6 @@ def is_parts_listing(listing) -> bool:
     return True
 
 RED_FLAGS = [
-    ("rebuilt or salvage title", r"\b(salvage|rebuilt|branded|write[- ]?off|total loss)\b"),
     ("accident or claim mentioned", r"(?<!no )\b(accidents?|icbc claims?|collision|damaged?)\b"),
     (
         "tune or forced induction",
@@ -147,6 +176,13 @@ def evaluate(listing, cfg: dict) -> str:
     if re.search(SEVERE_PATTERN, blob, re.I):
         listing.flags.insert(0, SEVERE_LABEL)
     listing.positives = [label for label, pat in POSITIVES if re.search(pat, blob, re.I)]
+    listing.title_status = title_status(blob)
+    if listing.title_status == "branded":
+        listing.flags.insert(0, "rebuilt, salvage or branded title")
+    elif listing.title_status == "clean":
+        listing.positives.insert(0, "clean title (seller says)")
+    else:
+        listing.flags.append("title status not stated")
 
     spec = build_spec(
         listing.model_match, listing.year,
@@ -168,6 +204,11 @@ def evaluate(listing, cfg: dict) -> str:
         return "not a target model"
     if is_parts_listing(listing):
         return "parts or accessories, not a car"
+    title_rule = search.get("title", "no_branded")
+    if listing.title_status == "branded" and title_rule in ("no_branded", "clean_only"):
+        return "rebuilt, salvage or branded title"
+    if listing.title_status == "unknown" and title_rule == "clean_only":
+        return "title status not stated"
     if listing.year and not (search["min_year"] <= listing.year <= search["max_year"]):
         return "year out of range"
     if listing.price is not None:

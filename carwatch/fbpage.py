@@ -51,6 +51,8 @@ def parse_page(text: str) -> dict:
         driven = DRIVEN_RE.search(line)
         if driven and "km" not in out:
             out["km"] = int(driven.group(1).replace(",", ""))
+        if line.lower() == "clean title":
+            out["clean_title"] = True
         trans = TRANS_RE.match(line)
         if trans and "transmission" not in out:
             out["transmission"] = trans.group(1).lower()
@@ -85,6 +87,8 @@ def apply_page(listing, page: dict) -> None:
     for key in ("km", "price", "transmission", "description", "days_listed", "seller_type"):
         if page.get(key) not in (None, ""):
             setattr(listing, key, page[key])
+    if page.get("clean_title") and "clean title" not in (listing.raw_text or "").lower():
+        listing.raw_text = ((listing.raw_text or "") + " Clean title").strip()
     if listing.km is None and listing.description:
         listing.km = _pick_km(listing.description)
     for key in ("title", "location"):

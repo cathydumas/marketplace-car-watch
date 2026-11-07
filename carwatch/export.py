@@ -58,6 +58,7 @@ def listing_row(listing) -> dict:
             f"{source_name(o['source'])}|{o['url']}" for o in listing.also_listed if o.get("url")
         ),
         "days_listed": listing.days_listed,
+        "title_status": listing.title_status,
         "seller": listing.seller_type or "",
         "status": listing.status,
         "call": listing.call,

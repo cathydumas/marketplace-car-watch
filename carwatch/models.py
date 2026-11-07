@@ -43,6 +43,7 @@ class Listing:
     references: list = field(default_factory=list)
     flags_extra: list = field(default_factory=list)
     dealer_fees: int = 0
+    title_status: str = "unknown"  # clean, branded, unknown
 
     def filled_fields(self) -> int:
         values = [self.title, self.price, self.location, self.year, self.km]
