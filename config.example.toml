@@ -28,3 +28,21 @@ bc_cities = [
 [email]
 # The Gmail search the skill runs to find alert emails.
 gmail_query = "from:facebookmail.com newer_than:3d"
+
+[valuation]
+# Cars usually sell for a bit less than the asking price. 0.05 means 5%.
+sale_discount = 0.05
+# How long you plan to keep the car before selling it, in years.
+hold_years = 1.5
+# How many km you expect to drive per year.
+km_per_year = 12000
+# Call it a Buy when the asking price is this share of similar cars or lower.
+buy_threshold = 0.93
+# Call it a Pass when the asking price is this share of similar cars or higher.
+pass_threshold = 1.10
+# Listings older than this many days get a lower suggested offer.
+stale_days = 30
+# Fewest comps needed before the tool gives value estimates.
+min_comps = 12
+# Ignore comps not seen in this many days.
+comps_max_age_days = 60

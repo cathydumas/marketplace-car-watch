@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 
+from .trims import build_spec
+
 MODEL_PATTERNS = {
     "GR86": r"\bgr\s?-?\s?86\b",
     "GT86": r"\bgt\s?-?\s?86\b",
@@ -12,6 +14,17 @@ MODEL_PATTERNS = {
 
 OTHER_PROVINCES = {"AB", "SK", "MB", "ON", "QC", "NB", "NS", "PE", "PEI", "NL", "YT", "NT", "NU"}
 
+# Problems that rule a car out as a flip. Also used to drop bad comps.
+SEVERE_PATTERN = (
+    r"\b(blown|seized)\s+(engine|motor)\b|\b(engine|motor)\s+(is\s+)?(blown|seized|dead)\b|"
+    r"\bneeds?\s+(an?\s+)?(new\s+)?(engine|motor|transmission|trans|clutch)\b|"
+    r"\bnot running\b|\bdoes ?n[o']t run\b|\bwon'?t start\b|\bno start\b|"
+    r"\bspun bearing\b|\brod knock\b|\bparts car\b|\bfor parts\b|\bnon[- ]?runner\b|"
+    r"\b(salvage|rebuilt|branded)\s+title\b|\bwrite[- ]?off\b|\btotal loss\b"
+)
+SEVERE_LABEL = "serious mechanical or title problem"
+PRICE_UNCLEAR_BELOW = 2000
+
 RED_FLAGS = [
     ("rebuilt or salvage title", r"\b(salvage|rebuilt|branded|write[- ]?off|total loss)\b"),
     ("accident or claim mentioned", r"(?<!no )\b(accidents?|icbc claims?|collision|damaged?)\b"),
@@ -21,7 +34,9 @@ RED_FLAGS = [
     ("sold as is or needs work", r"\b(mechanic special|needs work|as[- ]is|project)\b"),
     (
         "possible out-of-province history",
-        r"\b(alberta|ontario|saskatchewan|manitoba|quebec|out of province|imported?)\b",
+        r"\b(out[- ]of[- ]province|imported|"
+        r"(alberta|ontario|saskatchewan|manitoba|quebec|prairie|east(ern)?|ab|on|qc)\s+(car|vehicle)|"
+        r"(from|came from|brought from|originally from)\s+(alberta|ontario|saskatchewan|manitoba|quebec|back east|the east))\b",
     ),
 ]
 
@@ -67,20 +82,37 @@ def classify_province(listing, cfg: dict) -> str:
 def evaluate(listing, cfg: dict) -> str:
     """Fill in derived fields. Return an exclusion reason, or an empty string to keep."""
     search = cfg["search"]
-    blob = " ".join([listing.title, listing.location, listing.raw_text]).lower()
+    blob = " ".join(
+        [listing.title, listing.location, listing.raw_text, listing.description]
+    ).lower()
     listing.model_match = detect_model(listing, search["models"])
     listing.province_status = classify_province(listing, cfg)
     listing.flags = [label for label, pat in RED_FLAGS if re.search(pat, blob, re.I)]
+    if re.search(SEVERE_PATTERN, blob, re.I):
+        listing.flags.insert(0, SEVERE_LABEL)
     listing.positives = [label for label, pat in POSITIVES if re.search(pat, blob, re.I)]
+
+    spec = build_spec(
+        listing.model_match, listing.year,
+        f"{listing.title}\n{listing.description or listing.raw_text}",
+        listing.transmission,
+    )
+    listing.make = spec.make
+    listing.generation = spec.generation
+    listing.trim = spec.trim
+    listing.trim_tier = spec.trim_tier
+    listing.transmission = spec.transmission
 
     if not listing.model_match:
         return "not a target model"
     if listing.year and not (search["min_year"] <= listing.year <= search["max_year"]):
         return "year out of range"
     if listing.price is not None:
-        if listing.price < search["budget_min"]:
+        if listing.price < PRICE_UNCLEAR_BELOW:
+            listing.flags.append("price unclear, check the listing")
+        elif listing.price < search["budget_min"]:
             return "under budget range"
-        if listing.price > search["budget_max"]:
+        elif listing.price > search["budget_max"]:
             return "over budget"
     if listing.province_status == "other":
         return "outside allowed provinces"

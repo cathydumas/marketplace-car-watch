@@ -1,12 +1,18 @@
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
 
 from carwatch.cli import main
+from carwatch.comps import CompStore, load_comp_file
 from carwatch.config import load_config
+from carwatch.fbpage import apply_page, load_pages
 from carwatch.filters import evaluate
+from carwatch.models import Listing
 from carwatch.parser import load_email, parse_email
 from carwatch.store import Store
+from carwatch.trims import detect_transmission, detect_trim
+from carwatch.valuation import ValueModel, appraise
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -128,6 +134,173 @@ class StoreAndCliTests(unittest.TestCase):
             self.assertIn("2016 Scion FR-S Monogram", text)
             self.assertNotIn("Calgary", text)
             self.assertFalse((Path(tmp) / "data" / "seen.json").exists())
+
+
+COMPS = FIXTURES / "comps"
+PAGES = FIXTURES / "pages"
+TODAY = date(2026, 11, 7)
+
+
+def real_comps():
+    comps = []
+    for path in sorted(COMPS.iterdir()):
+        comps.extend(load_comp_file(path, "2026-11-07"))
+    return comps
+
+
+def hand_listing(model, year, km=None, price=None, text="", transmission="", days=None, location="Kelowna, BC"):
+    listing = Listing(
+        listing_id="x", url="", title=f"{year} {model}", price=price, location=location,
+        year=year, km=km, description=text, transmission=transmission, days_listed=days,
+    )
+    cfg = load_config(None)
+    cfg["search"] = {**cfg["search"], "budget_min": 0, "budget_max": 10**9}
+    evaluate(listing, cfg)
+    return listing
+
+
+class TrimTests(unittest.TestCase):
+    def test_trims(self):
+        self.assertEqual(detect_trim("2019 Toyota 86 GT 6M", "toyota"), ("GT", "upper"))
+        self.assertEqual(detect_trim("2018 Toyota GT86", "toyota"), ("", "unknown"))
+        self.assertEqual(detect_trim("2020 BRZ Sport-tech RS Manual", "subaru"), ("Sport-tech RS", "upper"))
+        self.assertEqual(detect_trim("2018 BRZ tS / 6-Speed", "subaru"), ("tS", "limited"))
+        self.assertEqual(detect_trim("2020 86 Hakone Edition GT", "toyota"), ("Hakone Edition", "limited"))
+        self.assertEqual(detect_trim("2017 Toyota 86 BASE", "toyota"), ("Base", "base"))
+
+    def test_transmission(self):
+        self.assertEqual(detect_transmission("6 SPD M/T"), "manual")
+        self.assertEqual(detect_transmission("2dr Cpe Auto"), "automatic")
+        self.assertEqual(detect_transmission("Skyline Auto Group, manual"), "manual")
+        self.assertEqual(detect_transmission("6-speed"), "")
+
+
+class CompTests(unittest.TestCase):
+    def test_autotrader_page_text(self):
+        comps = load_comp_file(COMPS / "autotrader_toyota86_page.txt", "2026-11-07")
+        self.assertEqual(len(comps), 19)  # the new 2027 is skipped
+        first = comps[0]
+        self.assertEqual((first.year, first.price, first.km), (2017, 22450, 24933))
+        self.assertEqual(first.trim_tier, "limited")
+        self.assertEqual(first.province, "ON")
+        private = [c for c in comps if c.seller_type == "private"]
+        self.assertEqual(len(private), 6)
+
+    def test_autotrader_compact(self):
+        comps = load_comp_file(COMPS / "autotrader_2026-11-07.psv", "2026-11-07")
+        self.assertEqual(len(comps), 121)
+        self.assertEqual({c.model for c in comps}, {"BRZ", "GR86", "FR-S"})
+
+    def test_store_tracks_price_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = CompStore(Path(tmp) / "comps.json")
+            comps = real_comps()
+            self.assertEqual(store.add(comps), (len(comps), 0))
+            comps[0].price -= 500
+            comps[0].last_seen = "2026-11-14"
+            store.add(comps[:1])
+            record = store.data[comps[0].key]
+            self.assertEqual(len(record["price_history"]), 2)
+
+
+class PageTests(unittest.TestCase):
+    def test_vehicle_page(self):
+        page = load_pages(PAGES)["1775877630223040"]
+        self.assertEqual(page["price"], 22889)
+        self.assertEqual(page["km"], 65000)
+        self.assertEqual(page["transmission"], "manual")
+        self.assertEqual(page["days_listed"], 49)
+        self.assertEqual(page["location"], "Vancouver, BC")
+        self.assertEqual(page["seller_type"], "dealer")
+
+    def test_general_item_page_blown_engine(self):
+        listing = Listing(listing_id="3021502318197351", url="")
+        apply_page(listing, load_pages(PAGES)["3021502318197351"])
+        self.assertEqual(listing.km, 130000)
+        self.assertEqual(listing.year, 2014)
+        cfg = load_config(None)
+        evaluate(listing, cfg)
+        self.assertEqual(listing.flags[0], "serious mechanical or title problem")
+
+
+class ValuationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.model = ValueModel(real_comps(), TODAY, {})
+
+    def test_fit_is_sensible(self):
+        coef = self.model.coefficients()
+        self.assertLess(coef["age"], 0)
+        self.assertLess(coef["km_10k"], 0)
+        self.assertLess(self.model.sd, 0.25)
+        value = self.model.predict(2018, 80000, "manual", 1, "unknown", "toyota")
+        self.assertTrue(16000 < value < 23000, value)
+
+    def test_fair_listing_gets_offer(self):
+        listing = hand_listing("Toyota 86", 2018, 80000, 19850)
+        appraise(listing, self.model)
+        self.assertTrue(listing.call.startswith("Offer $"), listing.call)
+        self.assertGreater(listing.valuation["hold_loss"], 0)
+
+    def test_overpriced_listing_passes(self):
+        listing = hand_listing("Toyota 86", 2018, 65000, 22889, transmission="manual", days=49)
+        appraise(listing, self.model)
+        self.assertEqual(listing.call, "Pass at this price")
+
+    def test_cheap_listing_is_buy(self):
+        listing = hand_listing("FR-S", 2014, 72500, 13500, transmission="manual")
+        appraise(listing, self.model)
+        self.assertEqual(listing.call, "Buy")
+
+    def test_blown_engine_passes(self):
+        listing = hand_listing("BRZ", 2014, 130000, 6000, text="HAS BLOWN ENGINE")
+        appraise(listing, self.model)
+        self.assertEqual(listing.call, "Pass")
+
+    def test_flags_lower_value(self):
+        clean = hand_listing("BRZ", 2017, 80000, 18000, transmission="manual")
+        tuned = hand_listing("BRZ", 2017, 80000, 18000, text="tuned, coilovers", transmission="manual")
+        appraise(clean, self.model)
+        appraise(tuned, self.model)
+        self.assertLess(tuned.valuation["fair_ask"], clean.valuation["fair_ask"])
+
+    def test_needs_comps(self):
+        listing = hand_listing("BRZ", 2017, 80000, 18000)
+        appraise(listing, ValueModel([], TODAY, {}))
+        self.assertEqual(listing.call, "Check details")
+
+    def test_placeholder_price_is_kept_and_flagged(self):
+        listing = Listing(
+            listing_id="y", url="", title="2016 Subaru BRZ", price=1, location="Victoria, BC", year=2016
+        )
+        self.assertEqual(evaluate(listing, load_config(None)), "")
+        self.assertIn("price unclear, check the listing", listing.flags)
+
+
+class IngestWithValuesTests(unittest.TestCase):
+    def test_digest_has_calls_and_comps_grow(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data = Path(tmp) / "data"
+            self.assertEqual(main(["comps", "add", str(COMPS), "--data-dir", str(data), "--seen", date.today().isoformat()]), 0)
+            inbox = Path(tmp) / "inbox"
+            inbox.mkdir()
+            (inbox / "a.txt").write_text(
+                "[2018 Toyota 86](https://www.facebook.com/marketplace/item/1775877630223040/) "
+                "CA$22,889\nVancouver, BC\n",
+                encoding="utf-8",
+            )
+            cfg = Path(tmp) / "config.toml"
+            cfg.write_text("[search]\nbudget_max = 25000\n", encoding="utf-8")
+            main([
+                "ingest", str(inbox), "--config", str(cfg), "--data-dir", str(data),
+                "--out-dir", str(Path(tmp) / "digests"), "--pages", str(PAGES),
+            ])
+            text = next((Path(tmp) / "digests").glob("*.md")).read_text(encoding="utf-8")
+            self.assertIn("- Call: Pass at this price.", text)
+            self.assertIn("65,000 km", text)
+            self.assertIn("Flip check", text)
+            saved = CompStore(data / "comps.json").data
+            self.assertIn("facebook:1775877630223040", saved)
 
 
 if __name__ == "__main__":

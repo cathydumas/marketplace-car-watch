@@ -24,6 +24,19 @@ class Listing:
     # Filled in by the store
     status: str = "new"  # new, price_drop, seen
     prev_price: Optional[int] = None
+    # Filled in from a saved listing page, when there is one
+    description: str = ""
+    transmission: str = ""
+    days_listed: Optional[int] = None
+    seller_type: str = ""  # dealer, private, or ""
+    # Filled in by trims and valuation
+    make: str = ""
+    generation: int = 0
+    trim: str = ""
+    trim_tier: str = "unknown"
+    valuation: dict = field(default_factory=dict)
+    call: str = ""
+    call_reasons: list = field(default_factory=list)
 
     def filled_fields(self) -> int:
         values = [self.title, self.price, self.location, self.year, self.km]

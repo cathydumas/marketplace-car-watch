@@ -3,6 +3,8 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
+from .valuation import VALUATION_DEFAULTS
+
 DEFAULTS = {
     "search": {
         "budget_min": 15000,
@@ -24,6 +26,7 @@ DEFAULTS = {
     "email": {
         "gmail_query": "from:facebookmail.com newer_than:3d",
     },
+    "valuation": dict(VALUATION_DEFAULTS),
 }
 
 
