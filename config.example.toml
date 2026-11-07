@@ -1,0 +1,30 @@
+# Copy this file to config.local.toml and edit it.
+# config.local.toml is git-ignored, so your changes stay on your machine.
+
+[search]
+budget_min = 15000
+budget_max = 22000
+min_year = 2013
+max_year = 2026
+# Allowed: "GR86", "GT86", "Toyota 86", "BRZ", "FR-S"
+models = ["GR86", "GT86", "Toyota 86", "BRZ", "FR-S"]
+
+[location]
+# Provinces to keep. Listings tagged with any other province are filtered out.
+allowed_provinces = ["BC"]
+# Used only when an email shows no province for a listing.
+bc_cities = [
+  "Victoria", "Saanich", "Langford", "Colwood", "Sidney", "Sooke",
+  "Nanaimo", "Duncan", "Courtenay", "Comox", "Campbell River", "Parksville",
+  "Port Alberni", "Vancouver", "Burnaby", "Richmond", "Surrey", "Delta",
+  "Langley", "Coquitlam", "Port Coquitlam", "New Westminster",
+  "North Vancouver", "West Vancouver", "Maple Ridge", "Abbotsford",
+  "Chilliwack", "Mission", "White Rock", "Squamish", "Whistler", "Kelowna",
+  "West Kelowna", "Vernon", "Kamloops", "Penticton", "Salmon Arm",
+  "Prince George", "Nelson", "Cranbrook", "Revelstoke", "Terrace",
+  "Prince Rupert", "Fort St. John",
+]
+
+[email]
+# The Gmail search the skill runs to find alert emails.
+gmail_query = "from:facebookmail.com newer_than:3d"

@@ -1,0 +1,11 @@
+# Personal config and data. Never commit these.
+config.local.toml
+inbox/
+digests/
+data/
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
