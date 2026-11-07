@@ -73,6 +73,16 @@ A scheduled task runs this every day. When asked to save today's snapshot:
 
 Read only. Never click anything that contacts a dealer or saves a search.
 
+## Facebook sweep
+
+Alert emails are the written record, but Facebook does not alert on every listing, so also sweep the searches yourself:
+
+1. Open each search in `README.md` (the alert links) and also `https://www.facebook.com/marketplace/vancouver/search/?query=brz&radius=500`, `...query=86...` and `...query=frs...`.
+2. Run `fb_collect.js` from this skill's folder on each page. Facebook removes results from the page as you scroll past them, so a script that reads the page only once, at the end of scrolling, misses most listings. This one records them while scrolling.
+3. Run each search twice. Facebook returns a different set on each load. Keep the union.
+4. Save every car listing to `listings/facebook-<YYYY-MM-DD>.jsonl`. Skip parts by their title.
+5. Count how many cars each search added that no other search found. Report it in your summary, so the user can see how much each search is worth.
+
 ## Other sites
 
 Save what you find to `listings/<source>-<YYYY-MM-DD>.jsonl`, one JSON object per line, with these keys: `source`, `id`, `url`, `title`, `price`, plus `km`, `location`, `transmission`, `seller_type` and `rating` when the page shows them. Keep BC listings only. Do not save seller names or phone numbers.
