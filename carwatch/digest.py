@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections import Counter
 
+from .sources import source_name
+
 
 def _money(value) -> str:
     return "price not shown" if value is None else f"${value:,}"
@@ -47,6 +49,47 @@ def _value_lines(listing) -> list:
     return lines
 
 
+RATING_LEAN = {
+    "great": "buy", "good": "buy",
+    "fair": "offer",
+    "high": "pass", "overpriced": "pass", "over": "pass",
+}
+
+
+def _call_lean(call: str) -> str:
+    if call.startswith("Buy") or call.startswith("Check it out"):
+        return "buy"
+    if call.startswith("Offer"):
+        return "offer"
+    if call.startswith("Pass"):
+        return "pass"
+    return ""
+
+
+def _rating_lean(rating: str) -> str:
+    first = (rating or "").strip().lower().split(" ")[0]
+    return RATING_LEAN.get(first, "")
+
+
+def _reference_lines(listing) -> list:
+    refs = [r for r in listing.references if r.get("rating")]
+    if not refs:
+        return []
+    seen, parts = set(), []
+    for ref in refs:
+        key = (ref["source"], ref["rating"])
+        if key in seen:
+            continue
+        seen.add(key)
+        parts.append(f"{source_name(ref['source'])} says {ref['rating']}")
+    lines = [f"- Other ratings: {', '.join(parts)}. These sites rate the asking price only, not condition or fees."]
+    ours = _call_lean(listing.call)
+    leans = {_rating_lean(r["rating"]) for r in refs} - {""}
+    if ours and leans and ours not in leans and not (ours == "offer" and leans <= {"buy", "offer"}):
+        lines.append("- Note: the tool and the other sites disagree on this one. Look closer before deciding.")
+    return lines
+
+
 def _entry(listing) -> str:
     price = _money(listing.price)
     if listing.status == "price_drop" and listing.prev_price is not None:
@@ -68,7 +111,11 @@ def _entry(listing) -> str:
         f"- Trim: {_trim_line(listing)}",
     ]
     lines.extend(_value_lines(listing))
-    lines.append(f"- Link: {listing.url}")
+    lines.extend(_reference_lines(listing))
+    lines.append(f"- Link ({source_name(listing.source)}): {listing.url}")
+    for other in listing.also_listed:
+        if other.get("url"):
+            lines.append(f"- Also on {source_name(other['source'])}: {other['url']}")
     if listing.flags:
         lines.append("- Watch for: " + ", ".join(listing.flags))
     if listing.positives:
@@ -80,18 +127,26 @@ def _score(listing) -> float:
     return (listing.valuation or {}).get("score", 0.0)
 
 
-def render(kept: list, excluded: list, today, email_count: int, comp_count: int = 0) -> str:
-    new = sorted([l for l in kept if l.status == "new"], key=_score, reverse=True)
-    drops = sorted([l for l in kept if l.status == "price_drop"], key=_score, reverse=True)
+def render(kept: list, excluded: list, today, email_count: int, comp_count: int = 0, sources: dict = None) -> str:
+    unclear = [l for l in kept if l.call == "Check price" and l.status != "seen"]
+    priced = [l for l in kept if l not in unclear]
+    new = sorted([l for l in priced if l.status == "new"], key=_score, reverse=True)
+    drops = sorted([l for l in priced if l.status == "price_drop"], key=_score, reverse=True)
     seen = [l for l in kept if l.status == "seen"]
     out = [f"# Car watch for {today.isoformat()}", ""]
+    parts = []
+    if email_count or not sources:
+        parts.append(f"{email_count} alert emails")
+    if sources:
+        parts.extend(f"{n} from {source_name(s)}" for s, n in sorted(sources.items(), key=lambda kv: -kv[1]))
     out.append(
-        f"Read {email_count} alert emails. {len(kept)} listings match. "
-        f"{len(new)} new, {len(drops)} price drops, {len(seen)} already reported. "
+        f"Listings read: {', '.join(parts)}. {len(kept)} cars match after removing duplicates, parts and "
+        f"cars outside the budget. {len(new)} new, {len(drops)} price drops, "
+        f"{len(unclear)} with no real price, {len(seen)} already reported. "
         f"Values use {comp_count} comparable listings."
     )
     out.append("")
-    picks = [l for l in new + drops if l.call == "Buy" or l.call.startswith("Offer")]
+    picks = [l for l in new + drops if _call_lean(l.call) in ("buy", "offer")]
     if picks:
         best = max(picks, key=_score)
         out.append("## Best value today")
@@ -106,6 +161,21 @@ def render(kept: list, excluded: list, today, email_count: int, comp_count: int 
         out.append("## Price drops")
         out.append("")
         out.append("\n\n".join(_entry(l) for l in drops))
+        out.append("")
+    if unclear:
+        out.append("## No real price shown")
+        out.append("")
+        out.append(
+            "These show a payment or a placeholder instead of a price. Ask the seller for the full price."
+        )
+        out.append("")
+        for l in unclear:
+            worth = (l.valuation or {}).get("likely_sale")
+            worth_text = f" Similar cars sell near ${worth:,}." if worth else ""
+            out.append(
+                f"- {l.title or 'Untitled listing'}, shows {_money(l.price)}, "
+                f"{l.location or 'location not shown'}.{worth_text} {l.url}"
+            )
         out.append("")
     if excluded:
         reasons = Counter(reason for _, reason in excluded)

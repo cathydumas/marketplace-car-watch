@@ -37,6 +37,12 @@ class Listing:
     valuation: dict = field(default_factory=dict)
     call: str = ""
     call_reasons: list = field(default_factory=list)
+    # Where the listing came from, other sites it is on, and their deal ratings
+    source: str = "facebook"
+    also_listed: list = field(default_factory=list)
+    references: list = field(default_factory=list)
+    flags_extra: list = field(default_factory=list)
+    dealer_fees: int = 0
 
     def filled_fields(self) -> int:
         values = [self.title, self.price, self.location, self.year, self.km]

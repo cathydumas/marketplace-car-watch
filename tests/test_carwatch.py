@@ -7,7 +7,8 @@ from carwatch.cli import main
 from carwatch.comps import CompStore, load_comp_file
 from carwatch.config import load_config
 from carwatch.fbpage import apply_page, load_pages
-from carwatch.filters import evaluate
+from carwatch.filters import dealer_fees, evaluate
+from carwatch.sources import attach_references, load_listings, merge_duplicates
 from carwatch.models import Listing
 from carwatch.parser import load_email, parse_email
 from carwatch.store import Store
@@ -248,9 +249,21 @@ class ValuationTests(unittest.TestCase):
         self.assertEqual(listing.call, "Pass at this price")
 
     def test_cheap_listing_is_buy(self):
-        listing = hand_listing("FR-S", 2014, 72500, 13500, transmission="manual")
+        listing = hand_listing("FR-S", 2014, 72500, 13500, transmission="manual", text="Base, one owner")
         appraise(listing, self.model)
         self.assertEqual(listing.call, "Buy")
+
+    def test_cheap_listing_with_no_details_is_a_lead(self):
+        listing = hand_listing("FR-S", 2014, 72500, 13500, transmission="manual")
+        appraise(listing, self.model)
+        self.assertEqual(listing.call, "Check it out")
+
+    def test_dealer_fees_raise_the_compared_price(self):
+        text = "All advertised vehicle prices do not include our $695 Documentation Fee, $295 Preparation fee, $10 VSA transaction levy or $1295 finance fees(if applicable)."
+        listing = hand_listing("BRZ", 2013, 72537, 14500, transmission="manual", text=text)
+        self.assertEqual(listing.dealer_fees, 990)
+        appraise(listing, self.model)
+        self.assertIn("compared at $15,490 including dealer fees", listing.call_reasons)
 
     def test_blown_engine_passes(self):
         listing = hand_listing("BRZ", 2014, 130000, 6000, text="HAS BLOWN ENGINE")
@@ -275,6 +288,59 @@ class ValuationTests(unittest.TestCase):
         )
         self.assertEqual(evaluate(listing, load_config(None)), "")
         self.assertIn("price unclear, check the listing", listing.flags)
+
+
+class FilterDetailTests(unittest.TestCase):
+    def test_fees_included_in_price_are_not_counted(self):
+        text = ("Advertised price includes Vehicle Preparation ($695: safety inspection) and Deal Processing ($595). "
+                "Advertised price excludes the $10 VSA Transaction Levy.")
+        self.assertEqual(dealer_fees(text), 0)
+        self.assertEqual(dealer_fees("Price Subject to Tax and Doc Fee of 695"), 695)
+
+    def test_parts_listings_are_filtered(self):
+        for title in ("2022 SUBARU BRZ DOORS", "Subaru BRZ Headlight Nostril", "2015 BRZ fa20 engine",
+                      "Hot wheels Subaru BRZ, Toyota GR86 CUP", "AutoArt Rocket Bunny Toyota 86"):
+            listing = Listing(listing_id="p", url="", title=title, price=500, location="Surrey, BC")
+            self.assertEqual(evaluate(listing, load_config(None)), "parts or accessories, not a car", title)
+
+    def test_payment_price_is_flagged(self):
+        listing = hand_listing("GR86", 2023, 39645, 263, text="$0 Down low as $262.91 biweekly for 84 months")
+        self.assertIn("price shown is a payment, not the car price", listing.flags)
+
+    def test_budget_stretch(self):
+        cfg = load_config(None)
+        near = Listing(listing_id="a", url="", title="2018 Toyota 86", price=22889, location="Surrey, BC", year=2018)
+        far = Listing(listing_id="b", url="", title="2023 Subaru BRZ", price=29995, location="Surrey, BC", year=2023)
+        self.assertEqual(evaluate(near, cfg), "")
+        self.assertIn("over budget, only worth it if the seller comes down", near.flags)
+        self.assertEqual(evaluate(far, cfg), "over budget")
+
+    def test_flag_wording_traps(self):
+        listing = hand_listing("GR86", 2023, 39645, 30000,
+                               text="sport-tuned suspension, Stock #: NLB68450, 6-Speed Automatic")
+        self.assertNotIn("tune or forced induction", listing.flags)
+        self.assertNotIn("stock", listing.positives)
+        self.assertNotIn("manual", listing.positives)
+        modded = hand_listing("Toyota 86", 2020, 48000, 20500, text="after market Exhust and cold air intake")
+        self.assertIn("modified", modded.flags)
+
+
+class SourceTests(unittest.TestCase):
+    def test_load_merge_and_references(self):
+        listings, refs = load_listings(FIXTURES / "listings")
+        self.assertEqual(len(listings), 4)
+        self.assertEqual(len(refs), 1)
+        cfg = load_config(None)
+        for listing in listings:
+            evaluate(listing, cfg)
+        merged = merge_duplicates(listings)
+        self.assertEqual(len(merged), 2)
+        eighty_six = next(l for l in merged if l.year == 2018)
+        self.assertEqual(len(eighty_six.also_listed), 1)
+        self.assertTrue(any("km differs" in f for f in eighty_six.flags_extra))
+        attach_references(merged, refs)
+        gt = next(l for l in merged if l.year == 2019)
+        self.assertIn({"source": "cargurus", "rating": "Fair Deal"}, gt.references)
 
 
 class IngestWithValuesTests(unittest.TestCase):

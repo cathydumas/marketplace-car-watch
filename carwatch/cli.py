@@ -14,6 +14,7 @@ from .fbpage import apply_page, load_pages
 from .filters import MODEL_PATTERNS, SEVERE_LABEL, evaluate
 from .models import Listing
 from .parser import load_email, parse_email
+from .sources import attach_references, load_listings, merge_duplicates
 from .store import Store
 from .valuation import ValueModel, appraise
 
@@ -56,13 +57,27 @@ def cmd_ingest(args) -> int:
     cfg = load_config(args.config)
     data_dir = Path(args.data_dir)
     today = _today()
-    files = _email_files(Path(args.path))
+    files = _email_files(Path(args.path)) if args.path else []
     listings = _parse_all(files)
+    references = []
+    source_counts = Counter()
+    for extra in args.listings or []:
+        more, refs = load_listings(Path(extra))
+        listings.extend(more)
+        references.extend(refs)
+        source_counts.update(l.source for l in more)
+        source_counts.update(r.get("source", "other") for r in refs)
 
     pages = load_pages(Path(args.pages))
     for listing in listings:
         if listing.listing_id in pages:
             apply_page(listing, pages[listing.listing_id])
+
+    # First pass sets the model so duplicates across sites can be matched.
+    for listing in listings:
+        evaluate(listing, cfg)
+    listings = merge_duplicates(listings)
+    attach_references(listings, references)
 
     kept, excluded = [], []
     for listing in listings:
@@ -77,6 +92,8 @@ def cmd_ingest(args) -> int:
     for listing in listings:
         if listing.flags and listing.flags[0] == SEVERE_LABEL:
             continue
+        if listing.source == "autotrader":
+            continue  # AutoTrader cars already come in through the comps refresh
         comp = comp_from_listing(listing, today.isoformat())
         if comp:
             new_comps.append(comp)
@@ -85,7 +102,7 @@ def cmd_ingest(args) -> int:
 
     store = Store(data_dir / "seen.json")
     store.annotate(kept)
-    text = render(kept, excluded, today, len(files), model.n)
+    text = render(kept, excluded, today, len(files), model.n, dict(source_counts))
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / f"{today.isoformat()}.md"
@@ -225,7 +242,11 @@ def main(argv=None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     ingest = sub.add_parser("ingest", help="parse saved emails and write a digest")
-    ingest.add_argument("path", help="a folder of saved emails, or one file")
+    ingest.add_argument("path", nargs="?", help="a folder of saved emails, or one file")
+    ingest.add_argument(
+        "--listings", action="append",
+        help="a .jsonl file or folder of listings from other sites. Can be repeated.",
+    )
     ingest.add_argument("--config", default=None)
     ingest.add_argument("--data-dir", default="data")
     ingest.add_argument("--out-dir", default="digests")

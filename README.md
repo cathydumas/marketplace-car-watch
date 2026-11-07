@@ -8,10 +8,11 @@ Watches Facebook Marketplace alert emails for a Toyota GR86, Toyota 86, Subaru B
 2. The skill finds those emails in Gmail and saves them in `inbox/`.
 3. A small Python program reads the emails and pulls out each listing.
 4. It drops cars that are the wrong model, out of budget or outside BC.
-5. If a browser is signed in to Facebook, the skill opens each promising listing and saves the page. That fills in km, transmission, the description and how long the car has been listed.
-6. The program works out the trim and values the car against comparable listings (comps) from AutoTrader.ca and Facebook.
-7. It writes a digest with a call for each car and a flip check: what the car should resell for after the hold period you set.
-8. It remembers what it has shown you, so each digest lists only new listings and price drops.
+5. If a browser is available, the skill also collects BC listings from AutoTrader.ca and Craigslist, and CarGurus.ca deal ratings. If the browser is signed in to Facebook, it opens each promising listing and saves the page. That fills in km, transmission, the description and how long the car has been listed.
+6. The same car listed on several sites becomes one entry with all its links. If the km differs between sites, the digest says so.
+7. The program works out the trim and values the car against comparable listings (comps) from AutoTrader.ca and Facebook.
+8. It writes a digest with a call for each car, the other sites' ratings next to it, and a flip check: what the car should resell for after the hold period you set.
+9. It remembers what it has shown you, so each digest lists only new listings and price drops.
 
 ## Status
 
@@ -115,18 +116,21 @@ Each car in the digest gets:
 - Call: Buy when the asking price is well under similar cars. Offer $X when it is near market, with an opening number. Pass at this price when it is well over. Pass when the text mentions a blown engine, a rebuilt or salvage title, or similar.
 - Flip check: what the car should resell for after your hold period, and the depreciation in between.
 
-Mods, tunes, track use, accident history and out-of-province history lower the value. Long-listed cars get a lower suggested offer.
+Mods, tunes, track use, accident history and out-of-province history lower the value. Long-listed cars get a lower suggested offer. When a dealer says its price does not include doc or prep fees, the tool adds them before comparing, and the suggested offer is the sticker number to open with.
+
+CarGurus deal ratings and AutoTrader price badges show up as other ratings. They judge the asking price only, not condition, mods or fees. When they disagree with the tool, the digest says to look closer. Cars a little outside the budget (10% by default, `budget_stretch`) still show, flagged, since prices are negotiable.
 
 The values are estimates. `comps stats` shows the typical error. Asking prices run higher than sale prices. Always get a vehicle history report and a pre-purchase inspection.
 
 ## Credentials
 
-There are no passwords or tokens in this repo. Gmail access goes through your own Claude connector. Your settings live in `config.local.toml`. Saved emails, listing pages, comps, digests and the seen-listings memory live in `inbox/`, `pages/`, `comps/`, `digests/` and `data/`. All of these are git-ignored.
+There are no passwords or tokens in this repo. Gmail access goes through your own Claude connector. Your settings live in `config.local.toml`. Saved emails, listing pages, other sites' listings, comps, digests and the seen-listings memory live in `inbox/`, `pages/`, `listings/`, `comps/`, `digests/` and `data/`. All of these are git-ignored.
 
 ## Commands
 
 ```
 python3 -m carwatch ingest inbox              # build today's digest
+python3 -m carwatch ingest inbox --listings listings   # include other sites
 python3 -m carwatch ingest inbox --dry-run    # build it without updating memory
 python3 -m carwatch inspect inbox             # show what the email parser read
 python3 -m carwatch comps add comps           # load saved AutoTrader results

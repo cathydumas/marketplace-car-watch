@@ -237,7 +237,9 @@ def appraise(listing, model: ValueModel) -> None:
         listing.valuation["score"] = -0.2
         return
 
-    price = listing.price
+    price = listing.price + (listing.dealer_fees or 0)
+    if listing.dealer_fees:
+        reasons.append(f"compared at ${price:,} including dealer fees")
     ratio = price / adj_ask
     listing.valuation["ratio"] = round(ratio, 3)
     listing.valuation["score"] = round(1 - ratio, 3)
@@ -248,7 +250,12 @@ def appraise(listing, model: ValueModel) -> None:
         reasons.append(f"listed about {listing.days_listed} days, room to negotiate")
 
     pct = abs(round((1 - ratio) * 100))
-    if ratio <= s["buy_threshold"]:
+    if ratio <= s["buy_threshold"] and listing.trim_tier == "unknown" and not listing.description:
+        # A cheap car with no details is a lead, not a sure thing.
+        listing.call = "Check it out"
+        reasons.insert(0, f"asking is {pct}% under similar cars, but the listing gives few details")
+        buy_at = price
+    elif ratio <= s["buy_threshold"]:
         listing.call = "Buy"
         reasons.insert(0, f"asking is {pct}% under similar cars")
         buy_at = price
@@ -258,9 +265,13 @@ def appraise(listing, model: ValueModel) -> None:
             reasons.insert(0, "asking is about market")
             buy_at = price
         else:
-            listing.call = f"Offer ${offer:,}"
+            fees = listing.dealer_fees or 0
+            sticker_offer = _round_down(offer - fees)
+            listing.call = f"Offer ${sticker_offer:,}"
             where = "under" if ratio < 1 else "over"
             reasons.insert(0, f"asking is {pct}% {where} similar cars")
+            if fees:
+                reasons.append(f"that is about ${offer:,} once the fees are added")
             buy_at = offer
     else:
         listing.call = "Pass at this price"

@@ -163,13 +163,15 @@ def comp_from_listing(listing, seen: str) -> Optional[Comp]:
     province = ""
     if "," in listing.location:
         province = listing.location.rsplit(",", 1)[1].strip().upper()
+    source = getattr(listing, "source", "facebook") or "facebook"
     comp = _make_comp(
-        "facebook", listing.year, listing.title or f"{listing.year} {listing.model_match}",
+        source, listing.year, listing.title or f"{listing.year} {listing.model_match}",
         listing.description[:200], listing.price, listing.km, listing.transmission,
         listing.seller_type, province, seen,
     )
     if comp:
-        comp.key = f"facebook:{listing.listing_id}"
+        lid = listing.listing_id
+        comp.key = lid if ":" in lid else f"{source}:{lid}"
     return comp
 
 

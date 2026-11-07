@@ -4,6 +4,9 @@
 [search]
 budget_min = 15000
 budget_max = 22000
+# Also show cars this far outside the budget, flagged, since prices are negotiable.
+# 0.10 means 10%: with the budget above, cars from $13,500 to $24,200 are shown.
+budget_stretch = 0.10
 min_year = 2013
 max_year = 2026
 # Allowed: "GR86", "GT86", "Toyota 86", "BRZ", "FR-S"

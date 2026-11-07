@@ -9,6 +9,7 @@ DEFAULTS = {
     "search": {
         "budget_min": 15000,
         "budget_max": 22000,
+        "budget_stretch": 0.10,
         "min_year": 2013,
         "max_year": 2026,
         "models": ["GR86", "GT86", "Toyota 86", "BRZ", "FR-S"],
