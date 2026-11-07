@@ -63,6 +63,15 @@ Save what you find to `listings/<source>-<YYYY-MM-DD>.jsonl`, one JSON object pe
 
 The tool merges the same car listed on several sites, keeps every link, and flags km that disagree between sites.
 
+## Dashboard
+
+If the user has a car watch dashboard (an Artifact made from the Dashboard type, page in `dashboard/index.html`), refresh it after step 7:
+
+1. For each car in today's digest, save its main listing photo to `photos/<key>.jpg`, where the key is `facebook-<item id>` or `<source>-<id>`. In a browser, Facebook photos can be fetched with CORS and drawn to a canvas. AutoTrader photos cannot, so capture the photo from the screen instead. Skip photos you cannot get. The card shows without one.
+2. Run `python3 -m carwatch ingest inbox --listings listings --export export`. Add `--dry-run` if step 7 already ran.
+3. Upload each file in `export/` to the dashboard as an asset. Update each dataset's `source.url` and `updated` with the new asset url.
+4. If `dashboard/index.html` changed, write it to the dashboard's `files/index.html`.
+
 ## Valuing one listing
 
 When the user pastes a single listing or link, open it if a browser is available, then run:

@@ -1,0 +1,371 @@
+<meta name="dash-one-writer">
+<style>
+/* Layout: header and four tiles, filter chips, a grid of photo cards, then one chart and two small cards. */
+.cw { --cw-ok: var(--color-ok); --cw-warn: var(--color-warn); --cw-bad: var(--color-bad);
+  display: grid; gap: var(--cds-gap-xl); font-family: var(--font-anthropic-sans); max-width: 78rem; margin-inline: auto; }
+.cw-head { display: grid; gap: var(--cds-gap-xs); }
+.cw-eyebrow { margin: 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); letter-spacing: .06em; text-transform: uppercase; }
+.cw-head h1 { margin: 0; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.05; text-wrap: balance; }
+.cw-take { margin: 0; font-size: var(--cds-font-size-heading); max-width: 60ch; }
+.cw .cw-take b { font-weight: 600; }
+.cw-tiles { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); }
+.cw-tile { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: calc(var(--cds-radius) * 2); padding: var(--cds-pad-lg); display: grid; gap: var(--cds-gap-xs); }
+.cw-tile span { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.cw-tile strong { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
+.cw-tile.is-good strong { color: var(--cw-ok); }
+.cw-chips { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; }
+.cw-chips p { margin: 0 var(--cds-gap-sm) 0 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.cw-chip { font: inherit; font-size: var(--cds-font-size-body); border: 1px solid var(--color-border-line); background: var(--color-panel); color: var(--color-fg);
+  border-radius: 999px; padding: .4rem .95rem; cursor: pointer; }
+.cw-chip[aria-pressed="true"] { background: var(--color-fg); color: var(--color-bg); border-color: var(--color-fg); }
+.cw-chip:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+.cw-grid { display: grid; gap: var(--cds-gap-lg); grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); min-height: 12rem; }
+.cw-grid.f-buy .cw-card:not(.v-buy), .cw-grid.f-offer .cw-card:not(.v-offer), .cw-grid.f-pass .cw-card:not(.v-pass) { display: none; }
+.cw-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: calc(var(--cds-radius) * 3); overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.cw-photo { position: relative; aspect-ratio: 4 / 3; background: var(--color-border-line); max-width: 100%; }
+.cw-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cw-badge { position: absolute; left: .75rem; top: .75rem; font-weight: 700; font-size: var(--cds-font-size-body); padding: .3rem .8rem; border-radius: 999px; color: #fff; letter-spacing: .02em; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+.v-buy .cw-badge { background: #1f8a4c; } .v-offer .cw-badge { background: #b26a00; } .v-pass .cw-badge { background: #6b6f76; }
+.cw-gap { position: absolute; right: .75rem; top: .75rem; font-weight: 600; font-size: var(--cds-font-size-caption); padding: .25rem .6rem; border-radius: 999px; background: rgba(0,0,0,.62); color: #fff; font-variant-numeric: tabular-nums; }
+.cw-src { position: absolute; left: .75rem; bottom: .75rem; font-size: var(--cds-font-size-caption); padding: .2rem .55rem; border-radius: 999px; background: rgba(0,0,0,.55); color: #fff; }
+.cw-body { padding: var(--cds-pad-lg); display: grid; gap: var(--cds-gap-sm); }
+.cw-price { display: flex; align-items: baseline; gap: var(--cds-gap-sm); flex-wrap: wrap; }
+.cw-price strong { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
+.cw-price small { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.cw-title { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); line-height: 1.25; }
+.cw-meta { display: flex; flex-wrap: wrap; gap: .25rem .75rem; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.cw-bar { display: grid; gap: .3rem; }
+.cw-bar-track { position: relative; height: .6rem; border-radius: 999px; background: var(--color-border-line); }
+.cw-bar-band { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: color-mix(in srgb, var(--color-fg) 22%, transparent); }
+.cw-bar-fair { position: absolute; top: -.2rem; bottom: -.2rem; width: 2px; background: var(--color-fg); }
+.cw-bar-you { position: absolute; top: 50%; width: .95rem; height: .95rem; margin: -.475rem 0 0 -.475rem; border-radius: 50%; border: 2px solid var(--color-panel); }
+.v-buy .cw-bar-you { background: #1f8a4c; } .v-offer .cw-bar-you { background: #b26a00; } .v-pass .cw-bar-you { background: #6b6f76; }
+.cw-bar-labels { display: flex; justify-content: space-between; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+.cw-why { margin: 0; font-size: var(--cds-font-size-caption); }
+.cw-flip { margin: 0; font-size: var(--cds-font-size-caption); padding: .5rem .7rem; border-radius: var(--cds-radius); background: color-mix(in srgb, var(--color-fg) 6%, transparent); }
+.cw-tags { display: flex; flex-wrap: wrap; gap: .35rem; }
+.cw-tag { font-size: var(--cds-font-size-caption); padding: .15rem .55rem; border-radius: 999px; border: 1px solid var(--color-border-line); }
+.cw-tag.bad { color: var(--cw-bad); border-color: color-mix(in srgb, var(--cw-bad) 45%, transparent); }
+.cw-tag.good { color: var(--cw-ok); border-color: color-mix(in srgb, var(--cw-ok) 45%, transparent); }
+.cw-tag.ref { color: var(--color-fg-muted); }
+.cw-links { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .2rem; }
+.cw-links a { font-size: var(--cds-font-size-caption); font-weight: 600; text-decoration: none; padding: .35rem .75rem; border-radius: 999px; background: var(--color-fg); color: var(--color-bg); }
+.cw-links a.alt { background: transparent; color: var(--color-fg); border: 1px solid var(--color-border-line); }
+.cw-cards2 { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
+.cw-panel { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: calc(var(--cds-radius) * 2); padding: var(--cds-pad-lg); display: grid; gap: var(--cds-gap-sm); min-width: 0; }
+.cw-panel h2 { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); }
+.cw-panel > p { margin: 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.cw-scatter { position: relative; min-height: 320px; }
+.cw-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); max-width: 15rem; }
+.cw-tip .t { color: var(--cds-text-secondary); }
+.cw-legend { display: flex; flex-wrap: wrap; gap: .3rem 1rem; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.cw-legend i { display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; margin-right: .3rem; vertical-align: -1px; }
+.cw-rows { display: grid; gap: .45rem; font-size: var(--cds-font-size-caption); min-height: 4rem; }
+.cw-row { display: grid; grid-template-columns: 9rem 1fr auto; gap: .6rem; align-items: center; }
+.cw-row .bar { height: .55rem; border-radius: 999px; background: var(--cds-chart-muted); }
+.cw-row .bar.hot { background: currentColor; }
+.cw-row b { font-variant-numeric: tabular-nums; font-weight: 600; }
+.cw-np { display: grid; gap: .4rem; font-size: var(--cds-font-size-caption); min-height: 3rem; }
+.cw-np a { color: inherit; }
+.cw-notes summary { cursor: pointer; font-weight: var(--cds-font-weight-medium); }
+.cw-notes dl { display: grid; grid-template-columns: max-content 1fr; gap: .4rem 1rem; font-size: var(--cds-font-size-caption); margin: var(--cds-gap-md) 0 0; }
+.cw-notes dt { font-weight: 600; } .cw-notes dd { margin: 0; color: var(--color-fg-muted); max-width: 70ch; }
+[data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+[data-dash-source-state=empty] { color: transparent; }
+@media (max-width: 30rem) { .cw-row { grid-template-columns: 6.5rem 1fr auto; } }
+</style>
+
+<div class="cw">
+  <header class="cw-head">
+    <p class="cw-eyebrow">GR86 · Toyota 86 · BRZ · FR-S · BC only · $15k to $22k</p>
+    <h1>Maggie's Car Watch</h1>
+    <p class="cw-take">Best value today: <b data-draw="best" data-source="best" data-field="title" data-row="0">—</b> at <b data-draw="bestprice" data-source="best" data-field="price" data-row="0">—</b>, <b data-draw="bestgap" data-source="best" data-field="under" data-row="0">—</b> under similar cars.</p>
+  </header>
+
+  <section class="cw-tiles" aria-label="Today in numbers">
+    <div class="cw-tile is-good"><span>Worth a look</span><strong data-draw="t-look" data-source="summary" data-field="value" data-where="metric=look">—</strong></div>
+    <div class="cw-tile"><span>Buy calls</span><strong data-draw="t-buy" data-source="summary" data-field="value" data-where="metric=buy">—</strong></div>
+    <div class="cw-tile"><span>Listings scanned</span><strong data-draw="t-scan" data-source="summary" data-field="value" data-where="metric=scanned">—</strong></div>
+    <div class="cw-tile"><span>Filtered out</span><strong data-draw="t-filt" data-source="summary" data-field="value" data-where="metric=filtered">—</strong></div>
+  </section>
+
+  <div class="cw-chips" role="group" aria-label="Show">
+    <p>Show</p>
+    <button class="cw-chip" type="button" data-f="all" aria-pressed="true">All</button>
+    <button class="cw-chip" type="button" data-f="buy" aria-pressed="false">Buy</button>
+    <button class="cw-chip" type="button" data-f="offer" aria-pressed="false">Offer</button>
+    <button class="cw-chip" type="button" data-f="pass" aria-pressed="false">Pass</button>
+  </div>
+
+  <section id="cars" class="cw-grid" data-draw="cards" data-source="listings photos" aria-label="Cars">—</section>
+
+  <section id="market" class="cw-panel">
+    <h2>Where today's cars sit</h2>
+    <p>Grey dots are asking prices across Canada. Coloured dots are today's BC cars. Tap a coloured dot for details.</p>
+    <div class="cw-legend"><span><i style="background:#1f8a4c"></i>Buy</span><span><i style="background:#b26a00"></i>Offer</span><span><i style="background:#6b6f76"></i>Pass</span><span><i style="background:var(--cds-chart-muted)"></i>Comparable listing</span></div>
+    <div class="cw-scatter" data-draw="scatter" data-source="comps listings"></div>
+  </section>
+
+  <div class="cw-cards2">
+    <section class="cw-panel">
+      <h2>Listings scanned today</h2>
+      <p>Before removing duplicates, parts and cars outside the budget.</p>
+      <div class="cw-rows" data-draw="sources" data-source="sources"></div>
+    </section>
+    <section class="cw-panel">
+      <h2>Why listings were dropped</h2>
+      <p>Counted after merging the same car listed on several sites.</p>
+      <div class="cw-rows" data-draw="filtered" data-source="filtered"></div>
+    </section>
+  </div>
+
+  <section class="cw-panel">
+    <h2>No real price shown</h2>
+    <p>These dealers posted a payment or a placeholder instead of a price. Ask for the full price before going further.</p>
+    <div class="cw-np" data-draw="noprice" data-source="listings"></div>
+  </section>
+
+  <details class="cw-notes">
+    <summary>How the calls work</summary>
+    <dl>
+      <dt>Market</dt><dd>What similar cars ask, from real AutoTrader.ca and Facebook listings, adjusted for year, km, transmission, trim and model. There is no free Canadian blue book.</dd>
+      <dt>Buy</dt><dd>Asking price is at least 7% under similar cars.</dd>
+      <dt>Offer</dt><dd>Close to market. The number is a suggested opening offer, lowered for cars that have sat for a month or more.</dd>
+      <dt>Pass</dt><dd>More than 10% over similar cars, or a blown engine, a rebuilt title or similar.</dd>
+      <dt>Flip check</dt><dd>Likely resale after 18 months of about 12,000 km a year, before tax, insurance and repairs.</dd>
+      <dt>Other ratings</dt><dd>CarGurus and AutoTrader rate the asking price only. They ignore condition, mods and dealer fees.</dd>
+      <dt>Not checked</dt><dd>Accident history, condition and ownership. Every car still needs a history report and a pre-purchase inspection.</dd>
+    </dl>
+  </details>
+</div>
+
+<script>
+const fmt$ = (n) => (n == null ? '—' : '$' + d3.format(',')(Math.round(n)));
+const fmtK = (n) => (n == null ? '—' : '$' + d3.format('.1f')(n / 1000) + 'k');
+const fmtKm = (n) => (n == null ? 'km not shown' : d3.format(',')(n) + ' km');
+const VERDICT = { 'Buy': 'buy', 'Check it out': 'buy', 'Offer': 'offer', 'Pass': 'pass' };
+const VCOLOR = { buy: '#1f8a4c', offer: '#b26a00', pass: '#6b6f76' };
+window.cwVerdict = (r) => VERDICT[r.verdict] || 'pass';
+window.cwFmt = { fmt$, fmtK, fmtKm, VCOLOR };
+
+dash.calc('summary', {
+  title: 'Today in numbers',
+  description: 'Counts of priced cars by call, listings scanned per site, and listings dropped.',
+  inputs: ['listings', 'sources', 'filtered'],
+  fn: (listings, sources, filtered) => {
+    const priced = listings.filter((r) => r.verdict !== 'Check price');
+    return [
+      { metric: 'look', value: priced.filter((r) => r.verdict === 'Buy' || r.verdict === 'Offer' || r.verdict === 'Check it out').length },
+      { metric: 'buy', value: priced.filter((r) => r.verdict === 'Buy').length },
+      { metric: 'scanned', value: d3.sum(sources, (r) => r.listings) },
+      { metric: 'filtered', value: d3.sum(filtered, (r) => r.listings) },
+    ];
+  },
+});
+
+dash.calc('best', {
+  title: 'Best value today',
+  description: 'The Buy or Offer car with the biggest gap under similar cars.',
+  inputs: ['listings'],
+  fn: (listings) => {
+    const picks = listings.filter((r) => ['Buy', 'Offer', 'Check it out'].includes(r.verdict) && r.vs_market != null);
+    const top = picks.sort((a, b) => a.vs_market - b.vs_market)[0];
+    return top ? [{ title: top.title, price: top.price, under: -top.vs_market }] : [];
+  },
+});
+
+const tile = (name, metric) => dash.draw(name, (el) => {
+  const s = dash.data('summary');
+  const row = s.status === 'ok' ? s.data.find((r) => r.metric === metric) : null;
+  el.textContent = row ? d3.format(',')(row.value) : '—';
+});
+tile('t-look', 'look'); tile('t-buy', 'buy'); tile('t-scan', 'scanned'); tile('t-filt', 'filtered');
+
+const best = (name, f) => dash.draw(name, (el) => {
+  const b = dash.data('best');
+  el.textContent = b.status === 'ok' && b.data[0] ? f(b.data[0]) : '—';
+});
+best('best', (r) => r.title);
+best('bestprice', (r) => fmt$(r.price));
+best('bestgap', (r) => d3.format('.0%')(r.under));
+
+document.querySelectorAll('.cw-chip').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const f = btn.dataset.f;
+    document.querySelectorAll('.cw-chip').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+    document.querySelectorAll('.cw-grid').forEach((g) => { ['buy', 'offer', 'pass'].forEach((k) => g.classList.toggle('f-' + k, k === f)); });
+  });
+});
+</script>
+
+<script>
+dash.draw('cards', (el) => {
+  const L = dash.data('listings');
+  const P = dash.data('photos');
+  if (L.status !== 'ok') { el.textContent = '—'; return; }
+  const { fmt$, fmtK, fmtKm } = window.cwFmt;
+  const photos = new Map(P.status === 'ok' ? P.data.map((p) => [p.id, p.photo]) : []);
+  const rows = L.data.filter((r) => r.verdict !== 'Check price');
+  el.replaceChildren();
+  const mk = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+  const mark = (n, field, id) => { n.dataset.source = 'listings'; n.dataset.field = field; n.dataset.where = 'id=' + encodeURIComponent(id); return n; };
+  for (const r of rows) {
+    const v = window.cwVerdict(r);
+    const card = mk('article', 'cw-card v-' + v);
+    const ph = mk('div', 'cw-photo');
+    const src = photos.get(r.id);
+    if (src) { const img = new Image(); img.src = src; img.alt = r.title; img.loading = 'lazy'; ph.append(img); }
+    ph.append(mark(mk('span', 'cw-badge', r.call), 'call', r.id));
+    if (r.vs_market != null) {
+      const pct = Math.round(Math.abs(r.vs_market) * 100);
+      ph.append(mark(mk('span', 'cw-gap', pct === 0 ? 'At market' : pct + '% ' + (r.vs_market < 0 ? 'under' : 'over') + ' market'), 'vs_market', r.id));
+    }
+    ph.append(mark(mk('span', 'cw-src', r.source), 'source', r.id));
+    card.append(ph);
+
+    const body = mk('div', 'cw-body');
+    const price = mk('div', 'cw-price');
+    price.append(mark(mk('strong', null, fmt$(r.price)), 'price', r.id));
+    if (r.dealer_fees) price.append(mark(mk('small', null, '+ ' + fmt$(r.dealer_fees) + ' dealer fees'), 'dealer_fees', r.id));
+    body.append(price);
+    body.append(mark(mk('h3', 'cw-title', r.title), 'title', r.id));
+    const meta = mk('div', 'cw-meta');
+    meta.append(mark(mk('span', null, fmtKm(r.km)), 'km', r.id));
+    meta.append(r.trim ? mark(mk('span', null, r.trim), 'trim', r.id) : mk('span', null, 'Trim not stated'));
+    if (r.transmission) meta.append(mark(mk('span', null, r.transmission), 'transmission', r.id));
+    meta.append(mark(mk('span', null, r.location), 'location', r.id));
+    if (r.days_listed != null) {
+      const dl = mk('span', null, 'Listed ');
+      dl.append(mark(mk('span', null, String(r.days_listed)), 'days_listed', r.id), document.createTextNode(' days ago'));
+      meta.append(dl);
+    }
+    body.append(meta);
+
+    if (r.fair_ask != null && r.price != null) {
+      const bar = mk('div', 'cw-bar');
+      bar.dataset.source = 'listings';
+      const lo = Math.min(r.range_low, r.price) * 0.94, hi = Math.max(r.range_high, r.price) * 1.06;
+      const x = d3.scaleLinear([lo, hi], [0, 100]).clamp(true);
+      const track = mk('div', 'cw-bar-track');
+      const band = mk('div', 'cw-bar-band'); band.style.left = x(r.range_low) + '%'; band.style.width = (x(r.range_high) - x(r.range_low)) + '%';
+      const fair = mk('div', 'cw-bar-fair'); fair.style.left = x(r.fair_ask) + '%';
+      const you = mk('div', 'cw-bar-you'); you.style.left = x(r.price + (r.dealer_fees || 0)) + '%';
+      track.append(band, fair, you);
+      const labels = mk('div', 'cw-bar-labels');
+      labels.append(mk('span', null, 'Market ' + fmtK(r.range_low) + ' to ' + fmtK(r.range_high)), mk('span', null, 'Typical ' + fmtK(r.fair_ask)));
+      bar.append(track, labels);
+      body.append(bar);
+    }
+    if (r.reasons) body.append(mk('p', 'cw-why', r.reasons.split(' | ').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join('. ') + '.'));
+    if (r.resale != null) {
+      const flip = mk('p', 'cw-flip', 'Flip check: buy at ');
+      flip.append(
+        mark(mk('b', null, fmt$(r.buy_at)), 'buy_at', r.id),
+        document.createTextNode(', sell after '),
+        mark(mk('span', null, String(r.hold_months)), 'hold_months', r.id),
+        document.createTextNode(' months for about '),
+        mark(mk('b', null, fmt$(r.resale)), 'resale', r.id),
+        document.createTextNode('. Expected loss '),
+        mark(mk('b', null, fmt$(r.hold_loss)), 'hold_loss', r.id),
+        document.createTextNode('.'),
+      );
+      body.append(flip);
+    }
+    const tags = mk('div', 'cw-tags');
+    for (const f of (r.flags ? r.flags.split(' | ') : [])) tags.append(mk('span', 'cw-tag bad', f));
+    for (const g of (r.positives ? r.positives.split(' | ') : [])) tags.append(mk('span', 'cw-tag good', g));
+    for (const x of (r.ratings ? r.ratings.split(' | ') : [])) tags.append(mk('span', 'cw-tag ref', x));
+    if (tags.childElementCount) body.append(tags);
+    const links = mk('div', 'cw-links');
+    const a = mk('a', null, 'View on ' + r.source); a.href = r.url; a.target = '_blank'; a.rel = 'noopener';
+    links.append(a);
+    for (const pair of (r.also_on ? r.also_on.split('; ') : [])) {
+      const [site, url] = pair.split('|');
+      const b = mk('a', 'alt', site); b.href = url; b.target = '_blank'; b.rel = 'noopener';
+      links.append(b);
+    }
+    body.append(links);
+    card.append(body);
+    el.append(card);
+  }
+});
+
+dash.draw('noprice', (el) => {
+  const L = dash.data('listings');
+  if (L.status !== 'ok') { el.textContent = '—'; return; }
+  const { fmt$ } = window.cwFmt;
+  el.replaceChildren();
+  for (const r of L.data.filter((d) => d.verdict === 'Check price')) {
+    const p = document.createElement('div');
+    p.dataset.source = 'listings'; p.dataset.field = 'title'; p.dataset.where = 'id=' + encodeURIComponent(r.id);
+    const a = document.createElement('a'); a.href = r.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = r.title;
+    p.append(a, document.createTextNode(' shows ' + fmt$(r.price) + ' in ' + r.location + (r.likely_sale ? '. Similar cars sell near ' + fmt$(r.likely_sale) + '.' : '.')));
+    el.append(p);
+  }
+});
+
+const barList = (name, id, key, hot) => dash.draw(name, (el) => {
+  const D = dash.data(id);
+  if (D.status !== 'ok') { el.textContent = '—'; return; }
+  el.replaceChildren();
+  const max = d3.max(D.data, (r) => r.listings) || 1;
+  for (const r of D.data) {
+    const row = document.createElement('div'); row.className = 'cw-row';
+    const label = document.createElement('span'); label.textContent = r[key];
+    const bar = document.createElement('div'); bar.className = 'bar' + (hot(r) ? ' hot' : ''); bar.style.width = (r.listings / max * 100) + '%'; bar.style.color = window.cwFmt.VCOLOR.buy;
+    const wrap = document.createElement('div'); wrap.append(bar);
+    const n = document.createElement('b'); n.textContent = d3.format(',')(r.listings);
+    n.dataset.source = id; n.dataset.field = 'listings'; n.dataset.where = key + '=' + encodeURIComponent(r[key]);
+    row.append(label, wrap, n); el.append(row);
+  }
+});
+barList('sources', 'sources', 'site', () => true);
+barList('filtered', 'filtered', 'reason', () => false);
+</script>
+
+<script>
+dash.draw('scatter', (el) => {
+  const C = dash.data('comps');
+  const L = dash.data('listings');
+  if (C.status !== 'ok' || L.status !== 'ok') { el.replaceChildren(); el.textContent = '—'; return; }
+  const { fmtK, fmtKm, VCOLOR } = window.cwFmt;
+  el.replaceChildren();
+  const comps = C.data.filter((r) => r.km != null && r.price != null);
+  const cars = L.data.filter((r) => r.verdict !== 'Check price' && r.km != null && r.price != null);
+  const W = Math.max(300, el.clientWidth || 600), H = 320;
+  const m = { top: 12, right: 16, bottom: 34, left: 52 };
+  const all = comps.concat(cars);
+  const x = d3.scaleLinear([0, d3.max(all, (r) => r.km) * 1.04], [m.left, W - m.right]).nice();
+  const y = d3.scaleLinear([d3.min(all, (r) => r.price) * 0.9, d3.max(all, (r) => r.price) * 1.04], [H - m.bottom, m.top]).nice();
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Asking price against km');
+  const gx = svg.append('g').attr('transform', `translate(0,${H - m.bottom})`).call(d3.axisBottom(x).ticks(W < 480 ? 4 : 7).tickFormat((d) => d3.format('~s')(d) + ' km'));
+  const gy = svg.append('g').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(6).tickSize(-(W - m.left - m.right)).tickFormat((d) => '$' + d / 1000 + 'k'));
+  for (const g of [gx, gy]) {
+    g.attr('font-size', null).attr('font-family', null);
+    g.selectAll('text').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)');
+    g.select('.domain').attr('stroke', 'var(--cds-chart-axis)');
+  }
+  gx.selectAll('.tick line').attr('stroke', 'var(--cds-chart-axis)');
+  gy.selectAll('.tick line').attr('stroke', 'var(--cds-chart-grid)');
+  gy.select('.domain').remove();
+  svg.append('g').selectAll('circle').data(comps).join('circle')
+    .attr('cx', (d) => x(d.km)).attr('cy', (d) => y(d.price)).attr('r', 3)
+    .attr('fill', 'var(--cds-chart-muted)').attr('opacity', 0.7);
+  const tip = document.createElement('div'); tip.className = 'cw-tip'; tip.hidden = true; el.append(tip);
+  svg.append('g').selectAll('circle').data(cars).join('circle')
+    .attr('cx', (d) => x(d.km)).attr('cy', (d) => y(d.price)).attr('r', 7)
+    .attr('fill', (d) => VCOLOR[window.cwVerdict(d)]).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2)
+    .style('cursor', 'pointer')
+    .on('mouseenter', (ev, d) => {
+      tip.replaceChildren();
+      const t = document.createElement('div'); t.className = 't'; t.textContent = d.call;
+      const n = document.createElement('div'); n.textContent = d.title;
+      const p = document.createElement('div'); p.textContent = fmtK(d.price) + ' · ' + fmtKm(d.km) + ' · market ' + fmtK(d.fair_ask);
+      tip.append(t, n, p); tip.hidden = false;
+      const bx = el.getBoundingClientRect(), r = ev.target.getBoundingClientRect();
+      const left = Math.min(r.left - bx.left + 12, bx.width - 240);
+      tip.style.left = Math.max(0, left) + 'px'; tip.style.top = (r.top - bx.top + 12) + 'px';
+    })
+    .on('mouseleave', () => { tip.hidden = true; });
+});
+</script>

@@ -14,6 +14,7 @@ from .fbpage import apply_page, load_pages
 from .filters import MODEL_PATTERNS, SEVERE_LABEL, evaluate
 from .models import Listing
 from .parser import load_email, parse_email
+from .export import write_export
 from .sources import attach_references, load_listings, merge_duplicates
 from .store import Store
 from .valuation import ValueModel, appraise
@@ -134,6 +135,12 @@ def cmd_ingest(args) -> int:
             "'python3 -m carwatch comps add <file>' to get value estimates.",
             file=sys.stderr,
         )
+    if args.export:
+        counts = write_export(
+            Path(args.export), kept, excluded, model.comps, dict(source_counts),
+            len(files), Path(args.photos), today,
+        )
+        print(f"export: {args.export} {counts}")
     if args.dry_run:
         print("dry run: seen-listing memory and comps were not updated")
     return 0
@@ -252,6 +259,8 @@ def main(argv=None) -> int:
     ingest.add_argument("--out-dir", default="digests")
     ingest.add_argument("--pages", default="pages", help="folder of saved listing pages")
     ingest.add_argument("--dry-run", action="store_true")
+    ingest.add_argument("--export", help="folder to write dashboard data files to")
+    ingest.add_argument("--photos", default="photos", help="folder of listing photos")
     ingest.set_defaults(func=cmd_ingest)
 
     inspect = sub.add_parser("inspect", help="show what the parser extracted")
