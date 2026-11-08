@@ -2,33 +2,33 @@
  {
   "month": "2026-11",
   "group": "BRZ (2013 to 2020)",
-  "median_price": 17994,
-  "median_km": 92344,
-  "listings": 26,
+  "median_price": 17990,
+  "median_km": 85959,
+  "listings": 71,
   "days": 1
  },
  {
   "month": "2026-11",
   "group": "BRZ (2022 on)",
-  "median_price": 29349,
-  "median_km": 30242,
-  "listings": 55,
+  "median_price": 29495,
+  "median_km": 28979,
+  "listings": 85,
   "days": 1
  },
  {
   "month": "2026-11",
   "group": "GR86 (2022 on)",
-  "median_price": 32618,
-  "median_km": 27669,
-  "listings": 20,
+  "median_price": 33990,
+  "median_km": 31189,
+  "listings": 37,
   "days": 1
  },
  {
   "month": "2026-11",
   "group": "Toyota 86 and FR-S (2013 to 2020)",
-  "median_price": 15999,
-  "median_km": 82400,
-  "listings": 39,
+  "median_price": 15995,
+  "median_km": 99027,
+  "listings": 61,
   "days": 1
  }
 ]
