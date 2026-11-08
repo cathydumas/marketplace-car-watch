@@ -437,3 +437,28 @@ class IngestWithValuesTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_found_by_merges_across_twins_and_keeps_branded_text(tmp_path):
+    from carwatch.sources import load_listings, merge_duplicates
+    from carwatch.export import coverage_rows
+    from carwatch.filters import evaluate
+    from carwatch.config import load_config
+    f = tmp_path / "x.jsonl"
+    f.write_text(
+        '{"source": "facebook", "id": "1", "url": "u1", "title": "2019 Subaru BRZ", "price": 18850, "found_by": ["search: brz"]}\n'
+        '{"source": "facebook", "id": "2", "url": "u2", "title": "2019 Subaru BRZ", "price": 18850, "description": "Rebuilt vehicle", "found_by": ["search: subaru brz"]}\n'
+        '{"source": "autotrader", "id": "3", "url": "u3", "title": "2016 Subaru BRZ", "price": 17000}\n'
+    )
+    cfg = load_config(None)
+    listings, _ = load_listings(f)
+    for l in listings:
+        evaluate(l, cfg)
+    merged = merge_duplicates(listings)
+    assert len(merged) == 2
+    twin = next(l for l in merged if l.year == 2019)
+    assert set(twin.found_by) == {"search: brz", "search: subaru brz"}
+    assert evaluate(twin, cfg) == "rebuilt, salvage or branded title"
+    rows = {r["finder"]: r for r in coverage_rows(merged)}
+    assert rows["AutoTrader.ca"]["only_here"] == 1
+    assert rows["Facebook search: brz"]["only_here"] == 0

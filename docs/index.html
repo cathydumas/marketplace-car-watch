@@ -37,7 +37,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
 <script src="d3.min.js"></script>
 <script>
 (function () {
-  var ids = ["listings", "photos", "comps", "sources", "filtered", "trends"];
+  var ids = ["listings", "photos", "comps", "sources", "filtered", "trends", "coverage"];
   var store = {}, calcs = {}, draws = [], listeners = [];
   ids.forEach(function (id) { store[id] = { status: 'loading', data: [] }; });
   function runCalc(id) {
@@ -73,7 +73,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
   document.addEventListener('DOMContentLoaded', function () {
     redraw();
     Promise.all(ids.map(function (id) {
-      return fetch('data/' + id + '.json?v=20261107163743').then(function (r) { return r.json(); })
+      return fetch('data/' + id + '.json?v=20261107234213').then(function (r) { return r.json(); })
         .then(function (rows) { store[id] = { status: 'ok', data: rows }; })
         .catch(function () { store[id] = { status: 'error', data: [] }; });
     })).then(function () { redraw(); });
@@ -162,6 +162,10 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
 .cw-notes dt { font-weight: 600; } .cw-notes dd { margin: 0; color: var(--color-fg-muted); max-width: 70ch; }
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 [data-dash-source-state=empty] { color: transparent; }
+.cw-wide .cw-row { grid-template-columns: minmax(8rem, 15rem) 1fr auto; }
+.cw-wide .cw-row small { color: var(--color-fg-muted); font-weight: 400; }
+.cw-cover-take { font-size: var(--cds-font-size-body); }
+.cw-found { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
 @media (max-width: 30rem) { .cw-row { grid-template-columns: 6.5rem 1fr auto; } }
 </style>
 
@@ -216,6 +220,13 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
       <div class="cw-rows" data-draw="filtered" data-source="filtered"></div>
     </section>
   </div>
+
+  <section class="cw-panel">
+    <h2>Did we miss anything?</h2>
+    <p class="cw-cover-take" data-draw="cover-take" data-source="coverage">—</p>
+    <p>Each bar is one search or site, and how many of today's priced cars it turned up. Facebook shows a different set on every load, so every car should be found by several searches. A car only one search found is the warning sign: one more blind spot and it would have been missed.</p>
+    <div class="cw-rows cw-wide" data-draw="coverage" data-source="coverage"></div>
+  </section>
 
   <section class="cw-panel">
     <h2>No real price shown</h2>
@@ -347,6 +358,12 @@ dash.draw('cards', (el) => {
       meta.append(dl);
     }
     body.append(meta);
+    if (r.found_count) {
+      const fb = mk('p', 'cw-found', 'Found by ');
+      fb.title = r.found_by;
+      fb.append(mark(mk('span', null, String(r.found_count)), 'found_count', r.id), document.createTextNode(r.found_count === 1 ? ' search' : ' searches and sites'));
+      body.append(fb);
+    }
     if (r.photo_notes) {
       const pn = mk('p', 'cw-why cw-photo-note', 'From photos: ');
       pn.append(mark(mk('span', null, r.photo_notes), 'photo_notes', r.id));
@@ -432,6 +449,30 @@ const barList = (name, id, key, hot) => dash.draw(name, (el) => {
   }
 });
 barList('sources', 'sources', 'site', () => true);
+
+dash.draw('coverage', (el) => {
+  const D = dash.data('coverage');
+  if (D.status !== 'ok') { el.textContent = '—'; return; }
+  el.replaceChildren();
+  const max = d3.max(D.data, (r) => r.cars) || 1;
+  for (const r of D.data) {
+    const row = document.createElement('div'); row.className = 'cw-row';
+    const label = document.createElement('span'); label.textContent = r.finder;
+    const bar = document.createElement('div'); bar.className = 'bar' + (r.only_here ? ' hot' : ''); bar.style.width = (r.cars / max * 100) + '%'; bar.style.color = window.cwFmt.VCOLOR.offer;
+    const wrap = document.createElement('div'); wrap.append(bar);
+    const n = document.createElement('b'); n.textContent = d3.format(',')(r.cars);
+    n.dataset.source = 'coverage'; n.dataset.field = 'cars'; n.dataset.where = 'finder=' + encodeURIComponent(r.finder);
+    if (r.only_here) { const o = document.createElement('small'); o.textContent = ' (' + r.only_here + ' only here)'; n.append(o); }
+    row.append(label, wrap, n); el.append(row);
+  }
+});
+dash.draw('cover-take', (el) => {
+  const D = dash.data('coverage');
+  if (D.status !== 'ok' || !D.data.length) { el.textContent = '—'; return; }
+  const total = D.data[0].total, single = d3.sum(D.data, (r) => r.only_here);
+  el.textContent = (total - single) + ' of ' + total + ' priced cars were found by two or more searches or sites. '
+    + (single ? single + ' turned up in only one, marked in colour below.' : 'None depended on a single search.');
+});
 barList('filtered', 'filtered', 'reason', () => false);
 </script>
 

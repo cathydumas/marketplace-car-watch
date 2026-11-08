@@ -6,6 +6,8 @@ Files written to the export folder:
   sources.json    how many listings each site gave
   filtered.json   how many were dropped, and why
   photos.json     one row per car photo, as a data URL
+  coverage.json   for each search or site, how many of today's cars it found
+                  and how many no other search found
 
 Photos are read from photos/<listing key>.jpg, where the key is the
 listing id with ":" replaced by "-" (facebook-1234..., autotrader-<id>).
@@ -58,6 +60,8 @@ def listing_row(listing) -> dict:
             f"{source_name(o['source'])}|{o['url']}" for o in listing.also_listed if o.get("url")
         ),
         "days_listed": listing.days_listed,
+        "found_by": "; ".join(listing.found_by),
+        "found_count": len(listing.found_by),
         "title_status": listing.title_status,
         "photo_notes": "; ".join(
             x for x in (
@@ -105,6 +109,27 @@ def _photo_data_url(path: Path, width: int = 480) -> str:
     return "data:image/jpeg;base64," + base64.b64encode(data).decode("ascii")
 
 
+def coverage_rows(kept: list) -> list:
+    """How much each search or site adds, over the cars with a real price.
+
+    A car that only one search found is the warning sign: one more blind spot
+    in that search and it would have been missed.
+    """
+    cars = [l for l in kept if l.price and l.price >= 2000]
+    found = Counter()
+    only = Counter()
+    for listing in cars:
+        finders = set(listing.found_by)
+        found.update(finders)
+        if len(finders) == 1:
+            only.update(finders)
+    rows = [
+        {"finder": f.replace("search: ", "Facebook search: "), "cars": n, "only_here": only.get(f, 0), "total": len(cars)}
+        for f, n in found.most_common()
+    ]
+    return rows
+
+
 def write_export(out_dir: Path, kept: list, excluded: list, comps: list,
                  source_counts: dict, email_count: int, photos_dir: Path, today) -> dict:
     out_dir = Path(out_dir)
@@ -132,6 +157,8 @@ def write_export(out_dir: Path, kept: list, excluded: list, comps: list,
     reasons = Counter(reason for _, reason in excluded)
     filtered = [{"reason": r, "listings": n} for r, n in reasons.most_common()]
     (out_dir / "filtered.json").write_text(json.dumps(filtered), encoding="utf-8")
+
+    (out_dir / "coverage.json").write_text(json.dumps(coverage_rows(kept)), encoding="utf-8")
 
     photos = []
     photos_dir = Path(photos_dir)

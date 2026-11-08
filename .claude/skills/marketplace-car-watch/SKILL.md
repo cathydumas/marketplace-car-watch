@@ -78,10 +78,11 @@ Read only. Never click anything that contacts a dealer or saves a search.
 Alert emails are the written record, but Facebook does not alert on every listing, so also sweep the searches yourself:
 
 1. Open each search in `README.md` (the alert links) and also `https://www.facebook.com/marketplace/vancouver/search/?query=brz&radius=500`, `...query=86...` and `...query=frs...`.
+   Facebook ignores `radius=` in the link and uses the radius saved on the account, which can quietly fall back to 20 km. Before collecting, check that the location chip on the results page says 500 km. If it does not, open the chip, choose 500 kilometres and Apply. Never collect from a page that shows a smaller radius.
 2. Run `fb_collect.js` from this skill's folder on each page. Facebook removes results from the page as you scroll past them, so a script that reads the page only once, at the end of scrolling, misses most listings. This one records them while scrolling.
 3. Run each search twice. Facebook returns a different set on each load. Keep the union.
-4. Save every car listing to `listings/facebook-<YYYY-MM-DD>.jsonl`. Skip parts by their title.
-5. Count how many cars each search added that no other search found. Report it in your summary, so the user can see how much each search is worth.
+4. Save every car listing to `listings/facebook-<YYYY-MM-DD>.jsonl`. Skip parts by their title. Add `"found_by": ["search: <query>", ...]` listing every search that returned the car. A car from an alert email gets `"alert: <alert name>"`. The tool merges these across twins and writes `coverage.json`, which the dashboard shows under "Did we miss anything?".
+5. In your summary, say how many priced cars only one search or site found. That number is the risk of missing a car. If it grows, add a search or run each one more times.
 
 ## Other sites
 

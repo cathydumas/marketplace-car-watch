@@ -66,6 +66,7 @@ def _listing_from(record: dict) -> Listing:
         seller_type=record.get("seller_type", ""),
     )
     listing.source = source
+    listing.found_by = list(record.get("found_by", [])) or [source_name(source)]
     if record.get("rating"):
         listing.references.append({"source": source, "rating": record["rating"]})
     return listing
@@ -124,6 +125,11 @@ def merge_duplicates(listings: list) -> list:
             main.also_listed.extend(other.also_listed)
         main.also_listed.append({"source": other.source, "url": other.url})
         main.references.extend(other.references)
+        main.found_by = sorted(set(main.found_by) | set(other.found_by))
+        # Keep what the other ad says, so a rebuilt title or a fee it mentions is not lost.
+        extra = " ".join(x for x in (other.raw_text, other.description) if x)
+        if extra and extra not in main.raw_text:
+            main.raw_text = (main.raw_text + " " + extra).strip()
         if main.km and other.km and abs(main.km - other.km) >= 1000:
             main.flags_extra.append(
                 f"km differs between sites: {main.km:,} on {source_name(main.source)}, "

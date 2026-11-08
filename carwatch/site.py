@@ -14,7 +14,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-DATASETS = ["listings", "photos", "comps", "sources", "filtered", "trends"]
+DATASETS = ["listings", "photos", "comps", "sources", "filtered", "trends", "coverage"]
 
 HEAD = """<!doctype html>
 <html lang="en-CA">
