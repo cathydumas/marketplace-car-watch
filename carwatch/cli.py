@@ -18,6 +18,7 @@ from .export import photo_key, write_export
 from .history import load_history, trend_rows
 from .photocheck import apply_photo_check, load_photo_checks
 from .site import build_site
+from .vin import apply_vin, load_vin_status
 from .sources import attach_references, load_listings, merge_duplicates
 from .store import Store
 from .valuation import ValueModel, appraise
@@ -77,6 +78,11 @@ def cmd_ingest(args) -> int:
         if listing.listing_id in pages:
             apply_page(listing, pages[listing.listing_id])
 
+    statuses = load_vin_status(Path(args.vin_status))
+    early_checks = load_photo_checks(Path(args.pages))
+    for listing in listings:
+        apply_vin(listing, statuses, (early_checks.get(photo_key(listing)) or {}).get("vin", ""))
+
     # First pass sets the model so duplicates across sites can be matched.
     for listing in listings:
         evaluate(listing, cfg)
@@ -127,6 +133,9 @@ def cmd_ingest(args) -> int:
         f"pages={len(pages)}"
     )
     print(f"digest: {out_file}")
+    todo = sorted({(l.vin, l.year) for l in kept if l.vin and not l.vin_status})
+    for vin, year in todo:
+        print(f"VIN not yet checked with ICBC: {vin} {year or ''}".rstrip())
     if files and not listings:
         print(
             "WARNING: no Marketplace item links found in these emails. "
@@ -276,6 +285,7 @@ def main(argv=None) -> int:
     ingest.add_argument("--dry-run", action="store_true")
     ingest.add_argument("--export", help="folder to write dashboard data files to")
     ingest.add_argument("--photos", default="photos", help="folder of listing photos")
+    ingest.add_argument("--vin-status", default="state/vin-status.json", help="ICBC status lookups by VIN")
     ingest.set_defaults(func=cmd_ingest)
 
     inspect = sub.add_parser("inspect", help="show what the parser extracted")

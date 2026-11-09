@@ -63,6 +63,9 @@ def listing_row(listing) -> dict:
         "found_by": "; ".join(listing.found_by),
         "found_count": len(listing.found_by),
         "title_status": listing.title_status,
+        "vin": listing.vin,
+        "vin_status": listing.vin_status,
+        "carfax_url": listing.carfax_url,
         "photo_notes": "; ".join(
             x for x in (
                 (listing.photo_check or {}).get("trim_evidence", ""),

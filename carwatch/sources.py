@@ -67,6 +67,8 @@ def _listing_from(record: dict) -> Listing:
     )
     listing.source = source
     listing.found_by = list(record.get("found_by", [])) or [source_name(source)]
+    listing.vin = (record.get("vin") or "").upper()
+    listing.carfax_url = record.get("carfax_url", "")
     if record.get("rating"):
         listing.references.append({"source": source, "rating": record["rating"]})
     return listing
@@ -94,6 +96,8 @@ def load_listings(path: Path) -> tuple:
 
 
 def _same_car(a: Listing, b: Listing) -> bool:
+    if a.vin and b.vin:
+        return a.vin == b.vin
     if not (a.year and b.year and a.year == b.year):
         return False
     if a.price is None or b.price is None or a.price < 2000 or b.price < 2000:
@@ -135,7 +139,7 @@ def merge_duplicates(listings: list) -> list:
                 f"km differs between sites: {main.km:,} on {source_name(main.source)}, "
                 f"{other.km:,} on {source_name(other.source)}"
             )
-        for key in ("km", "transmission", "description", "days_listed", "seller_type", "location"):
+        for key in ("km", "transmission", "description", "days_listed", "seller_type", "location", "vin", "carfax_url"):
             if getattr(main, key) in (None, "") and getattr(other, key) not in (None, ""):
                 setattr(main, key, getattr(other, key))
     return kept

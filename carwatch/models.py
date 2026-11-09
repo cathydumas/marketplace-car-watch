@@ -47,6 +47,9 @@ class Listing:
     photo_check: dict = field(default_factory=dict)
     # Which searches or alert emails turned this car up, for the coverage check
     found_by: list = field(default_factory=list)
+    vin: str = ""
+    vin_status: str = ""  # from ICBC's free status lookup
+    carfax_url: str = ""  # a free report link a dealer posted
 
     def filled_fields(self) -> int:
         values = [self.title, self.price, self.location, self.year, self.km]

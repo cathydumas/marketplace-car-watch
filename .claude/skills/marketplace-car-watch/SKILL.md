@@ -50,6 +50,7 @@ A scheduled task runs the whole car watch once a day on the user's computer. Fac
 1. Rebuild the comps from the price history: `python3 -m carwatch comps add history`. Then do "Daily price history" below for today.
 2. Do the "Facebook sweep" below, then "Other sites".
 3. Copy `state/photo-checks/*.photos.json` into `pages/`. For each car in budget whose call could be Buy or Offer and that has no page yet, open it and run `fb_listing_capture.js`. Save the outputs with `python3 .claude/skills/marketplace-car-watch/save_capture.py <files>`. Then look at `sheets/<id>.jpg` for each car without a photo check, do the photo check, and save it to both `pages/` and `state/photo-checks/`.
+   VINs: for each AutoTrader car in budget, open its page and run `autotrader_vin.js`. Add its `vin` and `carfax_url` to that car's line in `listings/`. If a Facebook ad or photo shows a VIN, put it in the line or in the photo check as `vin`. The tool checks each VIN's check digit and ignores bad ones. Never run ICBC's VIN search yourself: it has an "I'm not a robot" check. The dashboard links each VIN to it so the user can check by hand. If the user tells you a status, add it to `state/vin-status.json` as `{"<VIN>": {"year": 2013, "status": "normal", "checked": "<date>"}}`. A rebuilt, salvage, altered or non-repairable status drops the car.
 4. Run `python3 -m carwatch ingest --listings listings --pages pages --export export --photos photos`, then `python3 -m carwatch site --data export --out docs`.
 5. Commit `history/`, `state/` and `docs/` and push to `main`. Update the dashboard as in "Dashboard" below.
 
@@ -96,7 +97,7 @@ Alert emails are the written record, but Facebook does not alert on every listin
 
 ## Other sites
 
-Save what you find to `listings/<source>-<YYYY-MM-DD>.jsonl`, one JSON object per line, with these keys: `source`, `id`, `url`, `title`, `price`, plus `km`, `location`, `transmission`, `seller_type` and `rating` when the page shows them. Keep BC listings only. Do not save seller names or phone numbers.
+Save what you find to `listings/<source>-<YYYY-MM-DD>.jsonl`, one JSON object per line, with these keys: `source`, `id`, `url`, `title`, `price`, plus `km`, `location`, `transmission`, `seller_type`, `rating`, `vin` and `carfax_url` when known. Keep BC listings only. Do not save seller names or phone numbers.
 
 - `autotrader`: open `https://www.autotrader.ca/cars/subaru/brz/ot_used?size=100`, and the same for `toyota/86`, `scion/fr-s` and `toyota/gr86`. Keep listings whose location ends in BC. Save the price badge (Great price, Good price, Fair price) as `rating`.
 - `craigslist`: open `https://www.craigslist.org/search/area/<area>?cat=cta&query=brz%7Cfrs%7Cgr86%7Cgt86%7C%22toyota%2086%22%7C%22scion%22` for the areas vancouver, victoria, nanaimo, kelowna, kamloops, comoxvalley and abbotsford.

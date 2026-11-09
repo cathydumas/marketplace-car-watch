@@ -471,3 +471,33 @@ def test_accident_rule_reads_negation_and_drops_real_claims():
     assert not accident_mentioned("never been in an accident, no ICBC claims")
     assert accident_mentioned("2 previous accident claims ($12k and $8k)")
     assert accident_mentioned("rear ended last year, fixed")
+
+
+def test_vin_check_digit_and_icbc_status_brands_title():
+    from carwatch.vin import valid_vin, find_vin, apply_vin
+    from carwatch.models import Listing
+    from carwatch.filters import evaluate
+    from carwatch.config import load_config
+    assert valid_vin("JF1ZCAC15D1612628")
+    assert not valid_vin("JF1ZCAC15D1612629")
+    assert find_vin("Stock 27371909669173634, VIN jf1zcac15d1612628") == "JF1ZCAC15D1612628"
+    cfg = load_config(None)
+    car = Listing(listing_id="1", url="u", title="2013 Subaru BRZ", price=18000,
+                  location="Vancouver, BC", year=2013, description="VIN JF1ZCAC15D1612628")
+    apply_vin(car, {"JF1ZCAC15D1612628": {"status": "rebuilt"}})
+    assert car.vin_status == "rebuilt"
+    assert evaluate(car, cfg) == "rebuilt, salvage or branded title"
+    ok = Listing(listing_id="2", url="u", title="2013 Subaru BRZ", price=18000,
+                 location="Vancouver, BC", year=2013, description="VIN JF1ZCAC15D1612628")
+    apply_vin(ok, {"JF1ZCAC15D1612628": {"status": "normal"}})
+    evaluate(ok, cfg)
+    assert ok.title_status == "clean"
+
+
+def test_different_vins_are_never_merged():
+    from carwatch.models import Listing
+    from carwatch.sources import merge_duplicates
+    a = Listing(listing_id="a", url="ua", title="2013 Subaru BRZ", price=18888, location="Vancouver, BC", year=2013)
+    b = Listing(listing_id="b", url="ub", title="2013 Subaru BRZ", price=18800, location="Vancouver, BC", year=2013)
+    a.vin, b.vin = "JF1ZCAC15D1612628", "JF1ZCAC10D1604808"
+    assert len(merge_duplicates([a, b])) == 2
