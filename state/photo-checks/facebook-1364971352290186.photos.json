@@ -1,0 +1,13 @@
+{
+ "trim": "base",
+ "trim_evidence": "cloth seats",
+ "transmission": "manual",
+ "transmission_evidence": "manual shift lever",
+ "mods": [
+  "aftermarket wing",
+  "aftermarket tail lights",
+  "exhaust"
+ ],
+ "concerns": [],
+ "notes": ""
+}

@@ -86,7 +86,7 @@
   <header class="cw-head">
     <p class="cw-eyebrow">GR86 · Toyota 86 · BRZ · FR-S · BC only · $15k to $22k</p>
     <h1>Car Watch</h1>
-    <p class="cw-take">Best value today: <b data-draw="best" data-source="best" data-field="title" data-row="0">—</b> at <b data-draw="bestprice" data-source="best" data-field="price" data-row="0">—</b>, <b data-draw="bestgap" data-source="best" data-field="under" data-row="0">—</b> under similar cars.</p>
+    <p class="cw-take">Best clean-title value today: <b data-draw="best" data-source="best" data-field="title" data-row="0">—</b> at <b data-draw="bestprice" data-source="best" data-field="price" data-row="0">—</b>, <b data-draw="bestgap" data-source="best" data-field="under" data-row="0">—</b> similar cars.</p>
   </header>
 
   <section class="cw-tiles" aria-label="Today in numbers">
@@ -102,10 +102,10 @@
     <button class="cw-chip" type="button" data-f="buy" aria-pressed="false">Buy</button>
     <button class="cw-chip" type="button" data-f="offer" aria-pressed="false">Offer</button>
     <button class="cw-chip" type="button" data-f="pass" aria-pressed="false">Pass</button>
-    <button class="cw-chip cw-toggle" type="button" data-clean aria-pressed="false">Clean title only</button>
+    <button class="cw-chip cw-toggle" type="button" data-clean aria-pressed="true">Clean title only</button>
   </div>
 
-  <section id="cars" class="cw-grid" data-draw="cards" data-source="listings photos" aria-label="Cars">—</section>
+  <section id="cars" class="cw-grid f-clean" data-draw="cards" data-source="listings photos" aria-label="Cars">—</section>
 
   <section id="market" class="cw-panel">
     <h2>Where today's cars sit</h2>
@@ -188,11 +188,12 @@ dash.calc('summary', {
 });
 
 dash.calc('best', {
-  title: 'Best value today',
-  description: 'The Buy or Offer car with the biggest gap under similar cars.',
+  title: 'Best clean-title value today',
+  description: 'The Buy or Offer car whose seller says clean title, with the biggest gap under similar cars. Skips cars with an accident or a tune mentioned.',
   inputs: ['listings'],
   fn: (listings) => {
-    const picks = listings.filter((r) => ['Buy', 'Offer', 'Check it out'].includes(r.verdict) && r.vs_market != null);
+    const picks = listings.filter((r) => ['Buy', 'Offer', 'Check it out'].includes(r.verdict) && r.vs_market != null && r.title_status === 'clean'
+      && !/accident|forced induction/.test(r.flags || ''));
     const top = picks.sort((a, b) => a.vs_market - b.vs_market)[0];
     return top ? [{ title: top.title, price: top.price, under: -top.vs_market }] : [];
   },
@@ -211,7 +212,7 @@ const best = (name, f) => dash.draw(name, (el) => {
 });
 best('best', (r) => r.title);
 best('bestprice', (r) => fmt$(r.price));
-best('bestgap', (r) => d3.format('.0%')(r.under));
+best('bestgap', (r) => (Math.round(Math.abs(r.under) * 100) === 0 ? 'in line with' : d3.format('.0%')(Math.abs(r.under)) + (r.under >= 0 ? ' under' : ' over')));
 
 document.querySelectorAll('.cw-chip[data-clean]').forEach((btn) => {
   btn.addEventListener('click', () => {
