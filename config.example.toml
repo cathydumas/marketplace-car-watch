@@ -11,6 +11,10 @@ budget_stretch = 0.10
 # branded, and flags ads that don't say. "clean_only" also drops ads that
 # don't state a clean title. "any" keeps everything and only flags.
 title = "no_branded"
+# Accidents. "exclude" drops cars whose ad mentions an accident, ICBC claim
+# or damage. "flag" keeps them with a warning. An ad that says nothing is no
+# proof of a clean history: check the ICBC or Carfax report.
+accidents = "exclude"
 min_year = 2013
 max_year = 2026
 # Allowed: "GR86", "GT86", "Toyota 86", "BRZ", "FR-S"

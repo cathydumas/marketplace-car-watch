@@ -462,3 +462,12 @@ def test_found_by_merges_across_twins_and_keeps_branded_text(tmp_path):
     rows = {r["finder"]: r for r in coverage_rows(merged)}
     assert rows["AutoTrader.ca"]["only_here"] == 1
     assert rows["Facebook search: brz"]["only_here"] == 0
+
+
+def test_accident_rule_reads_negation_and_drops_real_claims():
+    from carwatch.filters import accident_mentioned
+    assert not accident_mentioned("This vehicle has no significant damage or problems.")
+    assert not accident_mentioned("NO ACCIDENTS NO ISSUES, forward collision warning")
+    assert not accident_mentioned("never been in an accident, no ICBC claims")
+    assert accident_mentioned("2 previous accident claims ($12k and $8k)")
+    assert accident_mentioned("rear ended last year, fixed")

@@ -100,8 +100,32 @@ def is_parts_listing(listing) -> bool:
         return False
     return True
 
+ACCIDENT_LABEL = "accident or claim mentioned"
+# Phrases that say there was no accident. They are removed before looking
+# for accident words, so "no accidents" or Facebook's own "no significant
+# damage" line do not count.
+ACCIDENT_NEGATION_RE = re.compile(
+    r"\b(no|zero|never (been )?in (an?|any)|not (been )?in (an?|any)|without|free of)\s+"
+    r"(\w+\s+){0,2}(accidents?|claims?|collisions?|damage)\b"
+    r"|\b(accident|claim|damage)[- ]free\b"
+    r"|\bno (icbc|insurance) claims?\b"
+    r"|\bno (major|significant|structural|body|frame)? ?damage( or problems)?\b",
+    re.I,
+)
+ACCIDENT_RE = re.compile(
+    r"\b(accidents?|icbc claims?|insurance claims?|claim history|"
+    r"(?<!pre-)(?<!pre )(?<!forward )collision(?!\s+(warning|avoidance|mitigation|alert|assist|detection))|"
+    r"damaged?|fender[- ]bender|rear[- ]ended|hit and run|t-?boned|written off)\b",
+    re.I,
+)
+
+
+def accident_mentioned(text: str) -> bool:
+    """True when the ad mentions an accident, claim or damage that it does not deny."""
+    return bool(ACCIDENT_RE.search(ACCIDENT_NEGATION_RE.sub(" ", text or "")))
+
+
 RED_FLAGS = [
-    ("accident or claim mentioned", r"(?<!no )\b(accidents?|icbc claims?|collision|damaged?)\b"),
     (
         "tune or forced induction",
         r"(?<!sport[- ])(?<!sport )(?<!factory[- ])\b(tuned?|turbo|supercharg\w*|e-?tune|flashed)\b"
@@ -171,6 +195,8 @@ def evaluate(listing, cfg: dict) -> str:
     listing.model_match = detect_model(listing, search["models"])
     listing.province_status = classify_province(listing, cfg)
     listing.flags = [label for label, pat in RED_FLAGS if re.search(pat, blob, re.I)]
+    if accident_mentioned(blob):
+        listing.flags.insert(0, ACCIDENT_LABEL)
     if re.search(SEVERE_PATTERN, blob, re.I):
         listing.flags.insert(0, SEVERE_LABEL)
     listing.positives = [label for label, pat in POSITIVES if re.search(pat, blob, re.I)]
@@ -207,6 +233,8 @@ def evaluate(listing, cfg: dict) -> str:
         return "rebuilt, salvage or branded title"
     if listing.title_status == "unknown" and title_rule == "clean_only":
         return "title status not stated"
+    if ACCIDENT_LABEL in listing.flags and search.get("accidents", "exclude") == "exclude":
+        return "accident or claim in the ad"
     if listing.year and not (search["min_year"] <= listing.year <= search["max_year"]):
         return "year out of range"
     if listing.price is not None:
