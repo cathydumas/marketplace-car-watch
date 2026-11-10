@@ -10,10 +10,10 @@
  {
   "month": "2026-11",
   "group": "BRZ (2022 on)",
-  "median_price": 29495,
-  "median_km": 28979,
-  "listings": 89,
-  "days": 1
+  "median_price": 29349,
+  "median_km": 29500,
+  "listings": 91,
+  "days": 2
  },
  {
   "month": "2026-11",
@@ -29,6 +29,6 @@
   "median_price": 15992,
   "median_km": 102013,
   "listings": 62,
-  "days": 2
+  "days": 3
  }
 ]
