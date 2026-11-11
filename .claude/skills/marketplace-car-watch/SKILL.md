@@ -90,10 +90,35 @@ Alert emails are the written record, but Facebook does not alert on every listin
 
 1. Open each search in `README.md` (the alert links) and also `https://www.facebook.com/marketplace/vancouver/search/?query=brz&radius=500`, `...query=86...` and `...query=frs...`.
    Facebook ignores `radius=` in the link and uses the radius saved on the account, which can quietly fall back to 20 km. Before collecting, check that the location chip on the results page says 500 km. If it does not, open the chip, choose 500 kilometres and Apply. Never collect from a page that shows a smaller radius.
-2. Run `fb_collect.js` from this skill's folder on each page. Facebook removes results from the page as you scroll past them, so a script that reads the page only once, at the end of scrolling, misses most listings. This one records them while scrolling.
+2. Collect while scrolling. Facebook removes results from the page as you scroll past them, so a script that reads the page only once, at the end of scrolling, misses most listings. If the browser pane is showing, `fb_collect.js` does this in one call. The scheduled run usually has the pane hidden, so use the three-part method under "Sweeping with a hidden pane" below.
 3. Run each search twice. Facebook returns a different set on each load. Keep the union.
 4. Save every car listing to `listings/facebook-<YYYY-MM-DD>.jsonl`. Skip parts by their title. Add `"found_by": ["search: <query>", ...]` listing every search that returned the car. A car from an alert email gets `"alert: <alert name>"`. The tool merges these across twins and writes `coverage.json`, which the dashboard shows under "Did we miss anything?".
 5. In your summary, say how many priced cars only one search or site found. That number is the risk of missing a car. If it grows, add a search or run each one more times.
+
+### Sweeping with a hidden pane
+
+The built-in browser pane is hidden whenever the desktop app's side panel shows something else, is closed or the app is minimized. That is the normal state for a scheduled run. A hidden pane does not draw the page, and Facebook loads more results only when the page is drawn, so `fb_collect.js` stalls at about 15 results. `tabs_context` says whether the pane is hidden.
+
+What works, learned on 2026-11-11:
+
+- Scroll with JavaScript to the bottom, then take a tiny screenshot (`scale: 0.1`). The screenshot makes the pane draw a frame, which loads the next batch. Wheel scrolls through the `computer` tool time out while hidden.
+- Paste each script's text into `javascript_tool`. Facebook's security policy blocks `eval`, so a script cannot be stored and run later.
+- Keep the union in IndexedDB. `fb_sweep_merge.js` does this. Do not keep it in `window.name` or `localStorage`. A failed page load wiped `window.name` once, and `localStorage` was cleared on one reload.
+- A `browser_batch` holds at most 25 steps and must finish in about 50 seconds. One search run fits in one batch as shown below. A batch of 22 wheel scrolls timed out.
+
+Steps:
+
+1. Before the first search, clear yesterday's union: run `fb_sweep_dump.js` with `reset = true`.
+2. For each run of each search, send one `browser_batch` with these steps:
+   - `navigate` to the search URL.
+   - `javascript_tool` with `fb_sweep_start.js`. It returns the chip text. The merge step refuses to save a run whose chip did not say 500 km. If it says less, set the radius as in step 1 above and redo the run.
+   - 7 rounds of: `javascript_tool` with `window.scrollTo(0, document.body.scrollHeight); window.__seen.size`, then `computer` screenshot at `scale: 0.1`, then `computer` wait 1.5 seconds.
+   - `javascript_tool` with `fb_sweep_merge.js`. It returns the run's count and the running total.
+   Expect 75 to 140 cards per run. A run that ends near 15 did not load. Redo it.
+3. After all searches ran twice, run `fb_sweep_dump.js` once. It returns one line per car-like card with the searches that found it. Turn those lines into `listings/facebook-<YYYY-MM-DD>.jsonl` with a short Python script. When the result is large, the tool saves it to a file, so parse that file instead of copying the lines.
+4. If a page load fails partway, navigate to the search again and redo only that run. The union in IndexedDB survives.
+
+AutoTrader photo galleries do not change photos while the pane is hidden either. If a photo check needs more than the first photo, note that it could not be done.
 
 ## Other sites
 
