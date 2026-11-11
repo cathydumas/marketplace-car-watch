@@ -99,7 +99,7 @@ Alert emails are the written record, but Facebook does not alert on every listin
 
 The built-in browser pane is hidden whenever the desktop app's side panel shows something else, is closed or the app is minimized. That is the normal state for a scheduled run. A hidden pane does not draw the page, and Facebook loads more results only when the page is drawn, so `fb_collect.js` stalls at about 15 results. `tabs_context` says whether the pane is hidden.
 
-What works, learned on 2026-11-11:
+What works, learned and tested on 2026-11-11:
 
 - Scroll with JavaScript to the bottom, then take a tiny screenshot (`scale: 0.1`). The screenshot makes the pane draw a frame, which loads the next batch. Wheel scrolls through the `computer` tool time out while hidden.
 - Paste each script's text into `javascript_tool`. Facebook's security policy blocks `eval`, so a script cannot be stored and run later.
@@ -111,11 +111,11 @@ Steps:
 1. Before the first search, clear yesterday's union: run `fb_sweep_dump.js` with `reset = true`.
 2. For each run of each search, send one `browser_batch` with these steps:
    - `navigate` to the search URL.
-   - `javascript_tool` with `fb_sweep_start.js`. It returns the chip text. The merge step refuses to save a run whose chip did not say 500 km. If it says less, set the radius as in step 1 above and redo the run.
+   - `javascript_tool` with the text of `fb_sweep_start.js`. The tool waits for the script's promise, so no `await` is needed. It returns the chip text. The merge step refuses to save a run whose chip did not say 500 km. If it says less, set the radius as in step 1 above and redo the run.
    - 7 rounds of: `javascript_tool` with `window.scrollTo(0, document.body.scrollHeight); window.__seen.size`, then `computer` screenshot at `scale: 0.1`, then `computer` wait 1.5 seconds.
    - `javascript_tool` with `fb_sweep_merge.js`. It returns the run's count and the running total.
    Expect 75 to 140 cards per run. A run that ends near 15 did not load. Redo it.
-3. After all searches ran twice, run `fb_sweep_dump.js` once. It returns one line per car-like card with the searches that found it. Turn those lines into `listings/facebook-<YYYY-MM-DD>.jsonl` with a short Python script. When the result is large, the tool saves it to a file, so parse that file instead of copying the lines.
+3. After all searches ran twice, run `fb_sweep_dump.js` once. Its result is padded so the tool always saves it to a file. Then run `python3 .claude/skills/marketplace-car-watch/fb_sweep_to_jsonl.py <that file> listings/facebook-<YYYY-MM-DD>.jsonl`. It prints the runs log and writes one line per car with its `found_by`. Never copy the lines by hand.
 4. If a page load fails partway, navigate to the search again and redo only that run. The union in IndexedDB survives.
 
 AutoTrader photo galleries do not change photos while the pane is hidden either. If a photo check needs more than the first photo, note that it could not be done.

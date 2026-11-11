@@ -11,5 +11,7 @@
   const rows = Object.entries(st.all)
     .filter(([, o]) => /(brz|\b86\b|gr ?86|gt ?86|fr-?s\b|scion)/i.test(o.t))
     .map(([id, o]) => id + ' | ' + o.t.replace(/^Just listed \| /, '') + ' | ' + o.f.map((x) => x.replace('search: ', '')).join(','));
-  return st.runs.length + ' runs\n' + st.runs.join('\n') + '\n---\n' + rows.join('\n');
+  // Padded so the browser tool saves the result to a file instead of
+  // returning it inline. Parse that file with fb_sweep_to_jsonl.py.
+  return st.runs.length + ' runs\n' + st.runs.join('\n') + '\n---\n' + rows.join('\n') + '\n---END---' + ' '.repeat(100000);
 })();
