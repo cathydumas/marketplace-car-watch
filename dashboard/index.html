@@ -34,6 +34,7 @@
 .cw-chip.cw-toggle[aria-pressed="true"] { background: #1f8a4c; border-color: #1f8a4c; color: #fff; }
 .cw-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: calc(var(--cds-radius) * 3); overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
 .cw-photo { position: relative; aspect-ratio: 4 / 3; background: var(--color-border-line); max-width: 100%; }
+.cw-nophoto { position: absolute; inset: 0; display: grid; place-items: center; padding: 2.5rem 1rem; text-align: center; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
 .cw-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cw-badge { position: absolute; left: .75rem; top: .75rem; font-weight: 700; font-size: var(--cds-font-size-body); padding: .3rem .8rem; border-radius: 999px; color: #fff; letter-spacing: .02em; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
 .v-buy .cw-badge { background: #1f8a4c; } .v-offer .cw-badge { background: #b26a00; } .v-pass .cw-badge { background: #6b6f76; }
@@ -312,6 +313,7 @@ dash.draw('cards', (el) => {
     const ph = mk('div', 'cw-photo');
     const src = photos.get(r.id);
     if (src) { const img = new Image(); img.src = src; img.alt = r.title; img.loading = 'lazy'; ph.append(img); }
+    else ph.append(mk('span', 'cw-nophoto', 'No photo saved. The listing has them.'));
     ph.append(mark(mk('span', 'cw-badge', r.call), 'call', r.id));
     if (r.vs_market != null) {
       const pct = Math.round(Math.abs(r.vs_market) * 100);
