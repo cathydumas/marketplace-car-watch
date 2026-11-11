@@ -114,7 +114,7 @@ Steps:
    - `javascript_tool` with the text of `fb_sweep_start.js`. The tool waits for the script's promise, so no `await` is needed. It returns the chip text. The merge step refuses to save a run whose chip did not say 500 km. If it says less, set the radius as in step 1 above and redo the run.
    - 7 rounds of: `javascript_tool` with `window.scrollTo(0, document.body.scrollHeight); window.__seen.size`, then `computer` screenshot at `scale: 0.1`, then `computer` wait 1.5 seconds.
    - `javascript_tool` with `fb_sweep_merge.js`. It returns the run's count and the running total.
-   Expect 75 to 140 cards per run. A run that ends near 15 did not load. Redo it.
+   Expect 100 to 180 cards per run (full test on 2026-11-11: 103 to 183, about 230 cars after both runs of all 12 searches). A run that ends near 15 did not load. Redo it.
 3. After all searches ran twice, run `fb_sweep_dump.js` once. Its result is padded so the tool always saves it to a file. Then run `python3 .claude/skills/marketplace-car-watch/fb_sweep_to_jsonl.py <that file> listings/facebook-<YYYY-MM-DD>.jsonl`. It prints the runs log and writes one line per car with its `found_by`. Never copy the lines by hand.
 4. If a page load fails partway, navigate to the search again and redo only that run. The union in IndexedDB survives.
 

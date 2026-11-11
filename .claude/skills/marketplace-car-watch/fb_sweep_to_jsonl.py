@@ -3,12 +3,17 @@
   python3 .claude/skills/marketplace-car-watch/fb_sweep_to_jsonl.py <saved tool output> listings/facebook-<YYYY-MM-DD>.jsonl
 
 Prints the runs log and how many cars were written. Keeps cards whose title
-starts with a year, so parts and toys are skipped. Run from the repo root.
+names a year and skips parts, toys and year ranges like "2017-2020". Run from the repo root.
 """
 import json
 import re
 import sys
 from pathlib import Path
+
+# Year ranges like "2017-2020 BRZ" and these words mark parts, not cars.
+# Words that also show up in real car ads (wheels, tires, exhaust, wing)
+# are left out on purpose. The tool drops leftovers with no real price.
+PARTS = re.compile(r"\b(parts? car|parts|grill|grille|oil pan|baffle|floor mats?|seat delete|diecast|1:\d\d)\b", re.I)
 
 raw = Path(sys.argv[1]).read_text()
 # The tool saves either the plain text or a JSON list of {type, text} parts,
@@ -39,6 +44,8 @@ for line in body.splitlines():
     prices = [p for p in rest if re.fullmatch(r"(CA\$[\d,.]+|Free)", p)]
     title = " | ".join(p for p in rest if p not in prices)
     if not re.match(r"(19|20)\d\d ", title) and not re.search(r"\b(19|20)\d\d\b", title[:40]):
+        continue
+    if re.match(r"(19|20)\d\d\s*[-+/]", title) or PARTS.search(title):
         continue
     price = None
     if prices and prices[0] != "Free":
