@@ -8,7 +8,7 @@ Watches Facebook Marketplace alert emails for a Toyota GR86, Toyota 86, Subaru B
 2. The skill finds those emails in Gmail and saves them in `inbox/`.
 3. A small Python program reads the emails and pulls out each listing.
 4. It drops cars that are the wrong model, out of budget or outside BC.
-5. If a browser is available, the skill also collects BC listings from AutoTrader.ca and Craigslist, and CarGurus.ca deal ratings. If the browser is signed in to Facebook, it opens each promising listing and saves the page. That fills in km, transmission, the description and how long the car has been listed.
+5. If a browser is available, the skill also collects BC listings from AutoTrader.ca and Craigslist, and CarGurus.ca deal ratings. If the browser is signed in to Facebook, it also runs 12 Marketplace searches, each twice and with a 500 km radius, since Facebook shows a different set of cars on every load. It opens each promising listing and saves the page. That fills in km, transmission, the description and how long the car has been listed. Claude also looks at the photos of each promising car for trim, transmission, mods and damage, and saves what it saw in `state/photo-checks/` so the next run does not redo it.
 6. The same car listed on several sites becomes one entry with all its links. If the km differs between sites, the digest says so.
 7. The program works out the trim and values the car against comparable listings (comps) from AutoTrader.ca and Facebook.
 8. It writes a digest with a call for each car, the other sites' ratings next to it, and a flip check: what the car should resell for after the hold period you set.
@@ -124,7 +124,7 @@ The values are estimates. `comps stats` shows the typical error. Asking prices r
 
 ## Credentials
 
-There are no passwords or tokens in this repo. Gmail access goes through your own Claude connector. Your settings live in `config.local.toml`. Saved emails, listing pages, other sites' listings, comps, digests and the seen-listings memory live in `inbox/`, `pages/`, `listings/`, `comps/`, `digests/` and `data/`. All of these are git-ignored.
+There are no passwords or tokens in this repo. Gmail access goes through your own Claude connector. Your settings live in `config.local.toml`. Saved emails, listing pages, other sites' listings, comps, digests and the seen-listings memory live in `inbox/`, `pages/`, `listings/`, `comps/`, `digests/` and `data/`. All of these are git-ignored. Two folders are committed on purpose: `history/` holds the daily AutoTrader search snapshots used for price trends, and `state/photo-checks/` holds only what Claude saw in listing photos, with no seller details.
 
 ## Commands
 
@@ -136,6 +136,8 @@ python3 -m carwatch inspect inbox             # show what the email parser read
 python3 -m carwatch comps add comps           # load saved AutoTrader results
 python3 -m carwatch comps stats               # summarise comps and the model
 python3 -m carwatch value --model "Toyota 86" --year 2018 --km 80000 --price 19850
+python3 -m carwatch trends --history history --out docs/data/trends.json   # monthly median prices
+python3 -m carwatch site --data export --out docs   # rebuild the dashboard page
 ```
 
 ## Dashboard
@@ -147,7 +149,19 @@ python3 -m carwatch ingest inbox --listings listings --export export
 python3 -m carwatch site --data export --out docs
 ```
 
-Commit `docs/` and GitHub Pages serves it. The page shows listing photos and links from public listings. The repo is public, so anything in `docs/` is public too.
+Commit `docs/` and GitHub Pages serves it. The page itself lives in `dashboard/index.html`. `site` wraps it with the data and writes `docs/index.html`, so edit `dashboard/index.html`, not the copy in `docs/`.
+
+What the page shows:
+
+- Four tiles: cars worth a look (Buy or Offer), with how many of those state a clean title, Buy calls, listings scanned and listings filtered out.
+- Filters: All, Buy, Offer or Pass, a "Clean title only" toggle (on by default) and a km slider (120,000 km by default, all the way right for any km). A line under the filters says how many cars show and why the rest are hidden. Cars whose ad gives no km always show.
+- A card for each priced car, with its photo, call, gap to market, market range, flip check, VIN check link and what Claude saw in the photos.
+- A scatter of asking price against km. Grey dots are comparable listings across Canada. Today's BC cars are coloured by call: green Buy, orange Offer, grey Pass. A filled dot matches your filters and an empty ring is hidden by them. The shaded strip is the $15k to $22k budget and the dashed line is the km limit. Hover over a car for details, click it to open the listing.
+- Listings scanned per site, why listings were dropped, which searches found each car, and dealer listings with no real price.
+
+A month-by-month price trend chart was removed in November 2026, when there was too little history for it to say anything. `docs/data/trends.json` keeps building from the daily AutoTrader snapshots in `history/`. The plan is to bring it back as small sparklines once there are a few months of data.
+
+The page shows listing photos and links from public listings. The repo is public, so anything in `docs/` is public too.
 
 ## Test it without Claude
 
