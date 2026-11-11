@@ -20,7 +20,16 @@
 .cw-chip[aria-pressed="true"] { background: var(--color-fg); color: var(--color-bg); border-color: var(--color-fg); }
 .cw-chip:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
 .cw-grid { display: grid; gap: var(--cds-gap-lg); grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); min-height: 12rem; }
-.cw-grid.f-buy .cw-card:not(.v-buy), .cw-grid.f-offer .cw-card:not(.v-offer), .cw-grid.f-pass .cw-card:not(.v-pass), .cw-grid.f-clean .cw-card:not(.t-clean) { display: none; }
+.cw-card[hidden] { display: none; }
+.cw-km { display: flex; flex-wrap: wrap; align-items: center; gap: var(--cds-gap-sm) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.cw-km label { color: var(--color-fg); font-weight: 600; font-variant-numeric: tabular-nums; min-width: 9.5rem; }
+.cw-km input[type=range] { flex: 1 1 14rem; max-width: 26rem; accent-color: var(--color-fg); }
+.cw-showing { margin: 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.cw-empty { grid-column: 1 / -1; margin: 0; padding: var(--cds-pad-lg); border: 1px dashed var(--color-border-line); border-radius: calc(var(--cds-radius) * 2); color: var(--color-fg-muted); font-size: var(--cds-font-size-body); }
+.cw-tile small { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.cw-legend svg { vertical-align: -2px; margin-right: .3rem; }
+.cw-legend .grp { display: inline-flex; flex-wrap: wrap; gap: .3rem .8rem; align-items: center; }
+.cw-legend .grp > b { font-weight: 600; color: var(--color-fg); }
 .cw-chip.cw-toggle { margin-left: auto; }
 .cw-chip.cw-toggle[aria-pressed="true"] { background: #1f8a4c; border-color: #1f8a4c; color: #fff; }
 .cw-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: calc(var(--cds-radius) * 3); overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
@@ -92,7 +101,7 @@
   </header>
 
   <section class="cw-tiles" aria-label="Today in numbers">
-    <div class="cw-tile is-good"><span>Worth a look</span><strong data-draw="t-look" data-source="summary" data-field="value" data-where="metric=look">—</strong></div>
+    <div class="cw-tile is-good"><span>Worth a look</span><strong data-draw="t-look" data-source="summary" data-field="value" data-where="metric=look">—</strong><small data-draw="t-look-note" data-source="summary">—</small></div>
     <div class="cw-tile"><span>Buy calls</span><strong data-draw="t-buy" data-source="summary" data-field="value" data-where="metric=buy">—</strong></div>
     <div class="cw-tile"><span>Listings scanned</span><strong data-draw="t-scan" data-source="summary" data-field="value" data-where="metric=scanned">—</strong></div>
     <div class="cw-tile"><span>Filtered out</span><strong data-draw="t-filt" data-source="summary" data-field="value" data-where="metric=filtered">—</strong></div>
@@ -106,21 +115,20 @@
     <button class="cw-chip" type="button" data-f="pass" aria-pressed="false">Pass</button>
     <button class="cw-chip cw-toggle" type="button" data-clean aria-pressed="true">Clean title only</button>
   </div>
+  <div class="cw-km">
+    <label for="cw-km">Up to 120,000 km</label>
+    <input id="cw-km" type="range" min="20000" max="250000" step="5000" value="120000" aria-describedby="cw-km-hint">
+    <span id="cw-km-hint">Slide right to let in higher-km cars. All the way right means any km.</span>
+  </div>
+  <p class="cw-showing" data-draw="showing" data-source="listings">—</p>
 
-  <section id="cars" class="cw-grid f-clean" data-draw="cards" data-source="listings photos" aria-label="Cars">—</section>
+  <section id="cars" class="cw-grid" data-draw="cards" data-source="listings photos" aria-label="Cars">—</section>
 
   <section id="market" class="cw-panel">
     <h2>Where today's cars sit</h2>
-    <p>Grey dots are asking prices across Canada. Coloured dots are today's BC cars. Tap a coloured dot for details.</p>
-    <div class="cw-legend"><span><i style="background:#1f8a4c"></i>Buy</span><span><i style="background:#b26a00"></i>Offer</span><span><i style="background:#6b6f76"></i>Pass</span><span><i style="background:var(--cds-chart-muted)"></i>Comparable listing</span></div>
+    <p>Grey dots are asking prices across Canada. Shapes are today's BC cars: the shape is the call, the shade of blue is the model year (darker is newer). The shaded strip is your $15k to $22k budget and the dashed line is the km limit. Cars your filters hide are faded. Tap a shape for details.</p>
+    <div class="cw-legend" data-draw="scatter-legend" data-source="listings"></div>
     <div class="cw-scatter" data-draw="scatter" data-source="comps listings"></div>
-  </section>
-
-  <section id="trend" class="cw-panel">
-    <h2>Price trend, month by month</h2>
-    <p>Median asking price on AutoTrader.ca across Canada, from daily snapshots that started November 7, 2026. A new point appears each month.</p>
-    <div class="cw-legend" data-draw="trend-legend" data-source="trends"></div>
-    <div class="cw-scatter" data-draw="trend" data-source="trends"></div>
   </section>
 
   <div class="cw-cards2">
@@ -182,6 +190,7 @@ dash.calc('summary', {
     const priced = listings.filter((r) => r.verdict !== 'Check price');
     return [
       { metric: 'look', value: priced.filter((r) => r.verdict === 'Buy' || r.verdict === 'Offer' || r.verdict === 'Check it out').length },
+      { metric: 'look_clean', value: priced.filter((r) => ['Buy', 'Offer', 'Check it out'].includes(r.verdict) && r.title_status === 'clean').length },
       { metric: 'buy', value: priced.filter((r) => r.verdict === 'Buy').length },
       { metric: 'scanned', value: d3.sum(sources, (r) => r.listings) },
       { metric: 'filtered', value: d3.sum(filtered, (r) => r.listings) },
@@ -206,7 +215,12 @@ const tile = (name, metric) => dash.draw(name, (el) => {
   const row = s.status === 'ok' ? s.data.find((r) => r.metric === metric) : null;
   el.textContent = row ? d3.format(',')(row.value) : '—';
 });
-tile('t-look', 'look'); tile('t-buy', 'buy'); tile('t-scan', 'scanned'); tile('t-filt', 'filtered');
+tile('t-look', 'look'); tile('t-buy', 'buy');
+dash.draw('t-look-note', (el) => {
+  const s = dash.data('summary');
+  const row = s.status === 'ok' ? s.data.find((r) => r.metric === 'look_clean') : null;
+  el.textContent = row ? row.value + ' with a stated clean title. Filters below may hide the rest.' : '';
+}); tile('t-scan', 'scanned'); tile('t-filt', 'filtered');
 
 const best = (name, f) => dash.draw(name, (el) => {
   const b = dash.data('best');
@@ -216,19 +230,67 @@ best('best', (r) => r.title);
 best('bestprice', (r) => fmt$(r.price));
 best('bestgap', (r) => (Math.round(Math.abs(r.under) * 100) === 0 ? 'in line with' : d3.format('.0%')(Math.abs(r.under)) + (r.under >= 0 ? ' under' : ' over')));
 
+// One filter state drives the cards, the "Showing" line and the scatter.
+const KM_ANY = 250000;
+window.cwFilter = { call: 'all', clean: true, maxKm: 120000 };
+window.cwHides = (r) => {
+  const f = window.cwFilter;
+  const why = [];
+  if (f.call !== 'all' && window.cwVerdict(r) !== f.call) why.push('call');
+  if (f.clean && r.title_status !== 'clean') why.push('clean');
+  if (f.maxKm < KM_ANY && r.km != null && r.km > f.maxKm) why.push('km');
+  return why;
+};
+window.cwApply = () => {
+  document.querySelectorAll('.cw-grid .cw-card').forEach((c) => { c.hidden = window.cwHides(c.__row).length > 0; });
+  document.querySelectorAll('.cw-grid').forEach((g) => {
+    const shown = g.querySelectorAll('.cw-card:not([hidden])').length;
+    let empty = g.querySelector('.cw-empty');
+    if (!shown && g.querySelector('.cw-card')) {
+      if (!empty) { empty = document.createElement('p'); empty.className = 'cw-empty'; g.prepend(empty); }
+      empty.textContent = 'No car matches every filter. Turn off "Clean title only" or slide the km limit right to see the rest.';
+    } else if (empty) empty.remove();
+  });
+  const lab = document.querySelector('label[for="cw-km"]');
+  if (lab) lab.textContent = window.cwFilter.maxKm >= KM_ANY ? 'Any km' : 'Up to ' + d3.format(',')(window.cwFilter.maxKm) + ' km';
+  (window.cwRefresh || []).forEach((fn) => fn());
+};
 document.querySelectorAll('.cw-chip[data-clean]').forEach((btn) => {
   btn.addEventListener('click', () => {
     const on = btn.getAttribute('aria-pressed') !== 'true';
     btn.setAttribute('aria-pressed', String(on));
-    document.querySelectorAll('.cw-grid').forEach((g) => g.classList.toggle('f-clean', on));
+    window.cwFilter.clean = on; window.cwApply();
   });
 });
 document.querySelectorAll('.cw-chip[data-f]').forEach((btn) => {
   btn.addEventListener('click', () => {
-    const f = btn.dataset.f;
     document.querySelectorAll('.cw-chip[data-f]').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
-    document.querySelectorAll('.cw-grid').forEach((g) => { ['buy', 'offer', 'pass'].forEach((k) => g.classList.toggle('f-' + k, k === f)); });
+    window.cwFilter.call = btn.dataset.f; window.cwApply();
   });
+});
+document.getElementById('cw-km').addEventListener('input', (ev) => { window.cwFilter.maxKm = +ev.target.value; window.cwApply(); });
+
+window.cwRefresh = [];
+dash.draw('showing', (el) => {
+  const L = dash.data('listings');
+  if (L.status !== 'ok') { el.textContent = '—'; return; }
+  const rows = L.data.filter((r) => r.verdict !== 'Check price');
+  const paint = () => {
+    const hid = rows.map(window.cwHides);
+    const shown = hid.filter((h) => !h.length).length;
+    const n = (k) => hid.filter((h) => h.includes(k)).length;
+    const parts = [];
+    if (n('km')) parts.push(n('km') + ' over the km limit');
+    if (n('clean')) parts.push(n('clean') + ' without a stated clean title');
+    if (n('call')) parts.push(n('call') + ' with a different call');
+    const noKm = rows.filter((r, i) => r.km == null && !hid[i].length).length;
+    el.textContent = 'Showing ' + shown + ' of ' + rows.length + ' priced cars.'
+      + (parts.length ? ' Hidden: ' + parts.join(', ') + (parts.length > 1 ? ' (a car can count twice).' : '.') : '')
+      + (noKm ? ' ' + noKm + ' shown with no km in the ad.' : '');
+  };
+  paint();
+  window.cwRefresh = window.cwRefresh.filter((f) => f.tag !== 'showing');
+  paint.tag = 'showing'; window.cwRefresh.push(paint);
 });
 </script>
 
@@ -246,6 +308,7 @@ dash.draw('cards', (el) => {
   for (const r of rows) {
     const v = window.cwVerdict(r);
     const card = mk('article', 'cw-card v-' + v + ' t-' + (r.title_status || 'unknown'));
+    card.__row = r;
     const ph = mk('div', 'cw-photo');
     const src = photos.get(r.id);
     if (src) { const img = new Image(); img.src = src; img.alt = r.title; img.loading = 'lazy'; ph.append(img); }
@@ -351,6 +414,7 @@ dash.draw('cards', (el) => {
     card.append(body);
     el.append(card);
   }
+  window.cwApply();
 });
 
 dash.draw('noprice', (el) => {
@@ -411,83 +475,64 @@ barList('filtered', 'filtered', 'reason', () => false);
 </script>
 
 <script>
-const TREND_GROUPS = ['Toyota 86 and FR-S (2013 to 2020)', 'BRZ (2013 to 2020)', 'GR86 (2022 on)', 'BRZ (2022 on)'];
-dash.draw('trend-legend', (el) => {
-  const T = dash.data('trends');
-  el.replaceChildren();
-  if (T.status !== 'ok') return;
-  TREND_GROUPS.forEach((g, i) => {
-    if (!T.data.some((r) => r.group === g)) return;
-    const s = document.createElement('span'); const dot = document.createElement('i');
-    dot.style.background = dash.colors[i]; s.append(dot, document.createTextNode(g)); el.append(s);
-  });
-});
-dash.draw('trend', (el) => {
-  const T = dash.data('trends');
-  el.replaceChildren();
-  if (T.status !== 'ok') { el.textContent = '—'; return; }
-  const rows = T.data.map((r) => ({ ...r, date: new Date(r.month + '-15T00:00:00Z') }));
-  const W = Math.max(300, el.clientWidth || 600), H = 280;
-  const m = { top: 14, right: 48, bottom: 30, left: 52 };
-  const months = [...new Set(rows.map((r) => r.month))].sort();
-  const x0 = new Date(months[0] + '-01T00:00:00Z');
-  const x1 = d3.utcMonth.offset(new Date(months[months.length - 1] + '-01T00:00:00Z'), months.length < 4 ? 4 - months.length + 1 : 1);
-  const x = d3.scaleUtc([x0, x1], [m.left, W - m.right]);
-  const y = d3.scaleLinear([d3.min(rows, (r) => r.median_price) * 0.85, d3.max(rows, (r) => r.median_price) * 1.08], [H - m.bottom, m.top]).nice();
-  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Median asking price by month');
-  const gx = svg.append('g').attr('transform', `translate(0,${H - m.bottom})`).call(d3.axisBottom(x).ticks(d3.utcMonth.every(1)).tickFormat(d3.utcFormat('%b %Y')));
-  const gy = svg.append('g').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.left - m.right)).tickFormat((d) => '$' + d / 1000 + 'k'));
-  for (const g of [gx, gy]) {
-    g.attr('font-size', null).attr('font-family', null);
-    g.selectAll('text').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)');
-    g.select('.domain').attr('stroke', 'var(--cds-chart-axis)');
-  }
-  gx.selectAll('.tick line').attr('stroke', 'var(--cds-chart-axis)');
-  gy.selectAll('.tick line').attr('stroke', 'var(--cds-chart-grid)');
-  gy.select('.domain').remove();
-  const tip = document.createElement('div'); tip.className = 'cw-tip'; tip.hidden = true; el.append(tip);
-  TREND_GROUPS.forEach((g, i) => {
-    const pts = rows.filter((r) => r.group === g).sort((a, b) => a.date - b.date);
-    if (!pts.length) return;
-    svg.append('path').datum(pts).attr('fill', 'none').attr('stroke', dash.colors[i]).attr('stroke-width', 2)
-      .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round')
-      .attr('d', d3.line().x((d) => x(d.date)).y((d) => y(d.median_price)));
-    svg.append('g').selectAll('circle').data(pts).join('circle')
-      .attr('cx', (d) => x(d.date)).attr('cy', (d) => y(d.median_price)).attr('r', 5)
-      .attr('fill', dash.colors[i]).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2)
-      .on('mouseenter', (ev, d) => {
-        tip.replaceChildren();
-        const a = document.createElement('div'); a.className = 't'; a.textContent = d3.utcFormat('%B %Y')(d.date);
-        const b = document.createElement('div'); b.textContent = d.group;
-        const c = document.createElement('div'); c.textContent = 'Median $' + d3.format(',')(d.median_price) + ' · ' + d3.format(',')(d.median_km) + ' km · ' + d.listings + ' cars';
-        tip.append(a, b, c); tip.hidden = false;
-        const bx = el.getBoundingClientRect(), r = ev.target.getBoundingClientRect();
-        tip.style.left = Math.max(0, Math.min(r.left - bx.left + 12, bx.width - 240)) + 'px'; tip.style.top = (r.top - bx.top + 12) + 'px';
-      })
-      .on('mouseleave', () => { tip.hidden = true; });
-    const last = pts[pts.length - 1];
-    svg.append('text').attr('x', x(last.date) + 9).attr('y', y(last.median_price) + 4)
-      .attr('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)')
-      .text('$' + d3.format('.1f')(last.median_price / 1000) + 'k');
-  });
-});
-</script>
+// Scatter: shape = call, blue shade = model year (sequential, darker = newer on light, lighter = newer on dark).
+const CW_SHAPE = { buy: d3.symbolTriangle, offer: d3.symbolDiamond, pass: d3.symbolCircle };
+const CW_CALLNAME = { buy: 'Buy', offer: 'Offer', pass: 'Pass' };
+const CW_YEARS = [
+  { label: '2013 to 2014', test: (y) => y <= 2014 },
+  { label: '2015 to 2017', test: (y) => y >= 2015 && y <= 2017 },
+  { label: '2018 to 2020', test: (y) => y >= 2018 && y <= 2021 },
+  { label: '2022 on', test: (y) => y >= 2022 },
+];
+const CW_RAMP = { light: ['#9ec5f4', '#3987e5', '#184f95', '#0a2a52'], dark: ['#184f95', '#3987e5', '#86b6ef', '#cde2fb'] };
+const cwIsDark = (el) => {
+  const c = d3.color(getComputedStyle(el.closest('.cw-panel') || document.body).backgroundColor);
+  if (!c || c.opacity === 0) return matchMedia('(prefers-color-scheme: dark)').matches;
+  return d3.hsl(c).l < 0.45;
+};
+const cwYearIdx = (y) => Math.max(0, CW_YEARS.findIndex((b) => b.test(y || 0)));
+const cwSym = (v, size) => d3.symbol(CW_SHAPE[v], size)();
+const CW_SIZE = { buy: 150, offer: 150, pass: 120 };
 
-<script>
+dash.draw('scatter-legend', (el) => {
+  el.replaceChildren();
+  const ramp = CW_RAMP[cwIsDark(el) ? 'dark' : 'light'];
+  const icon = (d, fill, stroke) => {
+    const svg = d3.create('svg').attr('width', 14).attr('height', 14).attr('viewBox', '-7 -7 14 14').attr('aria-hidden', 'true');
+    svg.append('path').attr('d', d).attr('fill', fill).attr('stroke', stroke || 'none').attr('stroke-width', 1.5);
+    return svg.node();
+  };
+  const grp = (title) => { const g = document.createElement('span'); g.className = 'grp'; const b = document.createElement('b'); b.textContent = title; g.append(b); el.append(g); return g; };
+  const g1 = grp('Call');
+  for (const v of ['buy', 'offer', 'pass']) { const s = document.createElement('span'); s.append(icon(cwSym(v, 70), 'none', 'var(--color-fg)'), document.createTextNode(CW_CALLNAME[v])); g1.append(s); }
+  const g2 = grp('Year');
+  CW_YEARS.forEach((b, i) => { const s = document.createElement('span'); s.append(icon(d3.symbol(d3.symbolSquare, 90)(), ramp[i]), document.createTextNode(b.label)); g2.append(s); });
+  const g3 = grp('Also');
+  const s1 = document.createElement('span'); s1.append(icon(d3.symbol(d3.symbolCircle, 30)(), 'var(--cds-chart-muted)'), document.createTextNode('Comparable listing')); g3.append(s1);
+  const s2 = document.createElement('span'); s2.append(icon('M-7,-4H7V4H-7Z', 'color-mix(in srgb, var(--cw-ok) 16%, transparent)'), document.createTextNode('Budget $15k to $22k')); g3.append(s2);
+});
+
 dash.draw('scatter', (el) => {
   const C = dash.data('comps');
   const L = dash.data('listings');
   if (C.status !== 'ok' || L.status !== 'ok') { el.replaceChildren(); el.textContent = '—'; return; }
-  const { fmtK, fmtKm, VCOLOR } = window.cwFmt;
+  const { fmtK, fmtKm } = window.cwFmt;
   el.replaceChildren();
+  const ramp = CW_RAMP[cwIsDark(el) ? 'dark' : 'light'];
   const comps = C.data.filter((r) => r.km != null && r.price != null);
   const cars = L.data.filter((r) => r.verdict !== 'Check price' && r.km != null && r.price != null);
   const W = Math.max(300, el.clientWidth || 600), H = 320;
   const m = { top: 12, right: 16, bottom: 34, left: 52 };
   const all = comps.concat(cars);
-  const x = d3.scaleLinear([0, d3.max(all, (r) => r.km) * 1.04], [m.left, W - m.right]).nice();
-  const y = d3.scaleLinear([d3.min(all, (r) => r.price) * 0.9, d3.max(all, (r) => r.price) * 1.04], [H - m.bottom, m.top]).nice();
-  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Asking price against km');
+  const x = d3.scaleLinear([0, Math.max(d3.max(all, (r) => r.km), 130000) * 1.04], [m.left, W - m.right]).nice();
+  const y = d3.scaleLinear([Math.min(d3.min(all, (r) => r.price), 15000) * 0.9, Math.max(d3.max(all, (r) => r.price), 22000) * 1.04], [H - m.bottom, m.top]).nice();
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Asking price against km, with the budget band');
+  // Budget band first, under everything.
+  svg.append('rect').attr('x', m.left).attr('width', W - m.left - m.right)
+    .attr('y', y(22000)).attr('height', y(15000) - y(22000))
+    .attr('fill', 'color-mix(in srgb, var(--cw-ok) 10%, transparent)');
+  svg.append('text').attr('x', W - m.right - 6).attr('y', y(22000) + 14).attr('text-anchor', 'end')
+    .attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text('Budget $15k to $22k');
   const gx = svg.append('g').attr('transform', `translate(0,${H - m.bottom})`).call(d3.axisBottom(x).ticks(W < 480 ? 4 : 7).tickFormat((d) => d3.format('~s')(d) + ' km'));
   const gy = svg.append('g').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(6).tickSize(-(W - m.left - m.right)).tickFormat((d) => '$' + d / 1000 + 'k'));
   for (const g of [gx, gy]) {
@@ -501,21 +546,43 @@ dash.draw('scatter', (el) => {
   svg.append('g').selectAll('circle').data(comps).join('circle')
     .attr('cx', (d) => x(d.km)).attr('cy', (d) => y(d.price)).attr('r', 3)
     .attr('fill', 'var(--cds-chart-muted)').attr('opacity', 0.7);
+  // km limit line, moved by the slider.
+  const lim = svg.append('g');
+  const limLine = lim.append('line').attr('y1', m.top).attr('y2', H - m.bottom).attr('stroke', 'var(--color-fg)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 4');
+  const limText = lim.append('text').attr('y', m.top + 12).attr('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)');
   const tip = document.createElement('div'); tip.className = 'cw-tip'; tip.hidden = true; el.append(tip);
-  svg.append('g').selectAll('circle').data(cars).join('circle')
-    .attr('cx', (d) => x(d.km)).attr('cy', (d) => y(d.price)).attr('r', 7)
-    .attr('fill', (d) => VCOLOR[window.cwVerdict(d)]).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2)
+  const marks = svg.append('g').selectAll('path').data(cars).join('path')
+    .attr('transform', (d) => `translate(${x(d.km)},${y(d.price)})`)
+    .attr('d', (d) => { const v = window.cwVerdict(d); return cwSym(v, CW_SIZE[v]); })
+    .attr('fill', (d) => ramp[cwYearIdx(d.year)]).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2)
     .style('cursor', 'pointer')
     .on('mouseenter', (ev, d) => {
       tip.replaceChildren();
-      const t = document.createElement('div'); t.className = 't'; t.textContent = d.call;
+      const t = document.createElement('div'); t.className = 't'; t.textContent = d.call + ' · ' + d.year;
       const n = document.createElement('div'); n.textContent = d.title;
       const p = document.createElement('div'); p.textContent = fmtK(d.price) + ' · ' + fmtKm(d.km) + ' · market ' + fmtK(d.fair_ask);
-      tip.append(t, n, p); tip.hidden = false;
+      tip.append(t, n, p);
+      const h = window.cwHides(d);
+      if (h.length) { const q = document.createElement('div'); q.className = 't'; q.textContent = 'Hidden by your filters'; tip.append(q); }
+      tip.hidden = false;
       const bx = el.getBoundingClientRect(), r = ev.target.getBoundingClientRect();
       const left = Math.min(r.left - bx.left + 12, bx.width - 240);
       tip.style.left = Math.max(0, left) + 'px'; tip.style.top = (r.top - bx.top + 12) + 'px';
     })
     .on('mouseleave', () => { tip.hidden = true; });
+  const paint = () => {
+    const mk = window.cwFilter.maxKm;
+    const any = mk >= 250000 || mk > x.domain()[1];
+    lim.attr('display', any ? 'none' : null);
+    if (!any) {
+      limLine.attr('x1', x(mk)).attr('x2', x(mk));
+      const right = x(mk) > W - 130;
+      limText.attr('x', x(mk) + (right ? -6 : 6)).attr('text-anchor', right ? 'end' : 'start').text('Up to ' + d3.format('~s')(mk) + ' km');
+    }
+    marks.attr('opacity', (d) => (window.cwHides(d).length ? 0.22 : 1));
+  };
+  paint();
+  window.cwRefresh = (window.cwRefresh || []).filter((f) => f.tag !== 'scatter');
+  paint.tag = 'scatter'; window.cwRefresh.push(paint);
 });
 </script>
