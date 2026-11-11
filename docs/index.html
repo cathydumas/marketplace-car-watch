@@ -73,7 +73,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
   document.addEventListener('DOMContentLoaded', function () {
     redraw();
     Promise.all(ids.map(function (id) {
-      return fetch('data/' + id + '.json?v=20261111213056').then(function (r) { return r.json(); })
+      return fetch('data/' + id + '.json?v=20261111213408').then(function (r) { return r.json(); })
         .then(function (rows) { store[id] = { status: 'ok', data: rows }; })
         .catch(function () { store[id] = { status: 'error', data: [] }; });
     })).then(function () { redraw(); });
@@ -597,8 +597,6 @@ dash.draw('scatter', (el) => {
   svg.append('rect').attr('x', m.left).attr('width', W - m.left - m.right)
     .attr('y', y(22000)).attr('height', y(15000) - y(22000))
     .attr('fill', 'color-mix(in srgb, var(--cw-ok) 10%, transparent)');
-  svg.append('text').attr('x', W - m.right - 6).attr('y', y(22000) + 14).attr('text-anchor', 'end')
-    .attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text('Budget $15k to $22k');
   const gx = svg.append('g').attr('transform', `translate(0,${H - m.bottom})`).call(d3.axisBottom(x).ticks(W < 480 ? 4 : 7).tickFormat((d) => d3.format('~s')(d) + ' km'));
   const gy = svg.append('g').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(6).tickSize(-(W - m.left - m.right)).tickFormat((d) => '$' + d / 1000 + 'k'));
   for (const g of [gx, gy]) {
