@@ -2,10 +2,10 @@
  {
   "month": "2026-11",
   "group": "BRZ (2013 to 2020)",
-  "median_price": 17925,
-  "median_km": 85426,
-  "listings": 76,
-  "days": 2
+  "median_price": 17900,
+  "median_km": 85959,
+  "listings": 77,
+  "days": 3
  },
  {
   "month": "2026-11",
@@ -13,15 +13,15 @@
   "median_price": 29349,
   "median_km": 29500,
   "listings": 91,
-  "days": 2
+  "days": 3
  },
  {
   "month": "2026-11",
   "group": "GR86 (2022 on)",
-  "median_price": 33988,
-  "median_km": 34749,
-  "listings": 40,
-  "days": 2
+  "median_price": 33989,
+  "median_km": 32534,
+  "listings": 42,
+  "days": 3
  },
  {
   "month": "2026-11",
@@ -29,6 +29,6 @@
   "median_price": 15992,
   "median_km": 102013,
   "listings": 62,
-  "days": 3
+  "days": 4
  }
 ]

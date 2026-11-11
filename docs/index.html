@@ -73,7 +73,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
   document.addEventListener('DOMContentLoaded', function () {
     redraw();
     Promise.all(ids.map(function (id) {
-      return fetch('data/' + id + '.json?v=20261110191113').then(function (r) { return r.json(); })
+      return fetch('data/' + id + '.json?v=20261111130840').then(function (r) { return r.json(); })
         .then(function (rows) { store[id] = { status: 'ok', data: rows }; })
         .catch(function () { store[id] = { status: 'error', data: [] }; });
     })).then(function () { redraw(); });
@@ -607,7 +607,7 @@ dash.draw('scatter', (el) => {
 });
 </script>
 
-<p class="cw-foot">Updated November 10, 2026 from Facebook Marketplace, AutoTrader.ca, Craigslist and CarGurus.ca listings. Values are estimates from asking prices, not appraisals. Built with <a href="https://github.com/cathydumas/marketplace-car-watch">marketplace-car-watch</a>.</p>
+<p class="cw-foot">Updated November 11, 2026 from Facebook Marketplace, AutoTrader.ca, Craigslist and CarGurus.ca listings. Values are estimates from asking prices, not appraisals. Built with <a href="https://github.com/cathydumas/marketplace-car-watch">marketplace-car-watch</a>.</p>
 </div>
 </body>
 </html>
