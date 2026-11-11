@@ -73,7 +73,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
   document.addEventListener('DOMContentLoaded', function () {
     redraw();
     Promise.all(ids.map(function (id) {
-      return fetch('data/' + id + '.json?v=20261111212501').then(function (r) { return r.json(); })
+      return fetch('data/' + id + '.json?v=20261111212635').then(function (r) { return r.json(); })
         .then(function (rows) { store[id] = { status: 'ok', data: rows }; })
         .catch(function () { store[id] = { status: 'error', data: [] }; });
     })).then(function () { redraw(); });
@@ -213,7 +213,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
 
   <section id="market" class="cw-panel">
     <h2>Where today's cars sit</h2>
-    <p>Grey dots are asking prices across Canada. Coloured dots are today's BC cars. The shaded strip is your $15k to $22k budget and the dashed line is the km limit. Cars your filters hide are faded. Tap a coloured dot for details, including the year.</p>
+    <p>Grey dots are asking prices across Canada. Coloured dots are today's BC cars. The shaded strip is your $15k to $22k budget and the dashed line is the km limit. Tap a coloured dot for details, including the year.</p>
     <div class="cw-legend" data-draw="scatter-legend" data-source="listings"></div>
     <div class="cw-scatter" data-draw="scatter" data-source="comps listings"></div>
   </section>
@@ -624,8 +624,7 @@ dash.draw('scatter', (el) => {
       const n = document.createElement('div'); n.textContent = d.title;
       const p = document.createElement('div'); p.textContent = fmtK(d.price) + ' · ' + fmtKm(d.km) + ' · market ' + fmtK(d.fair_ask);
       tip.append(t, n, p);
-      const h = window.cwHides(d);
-      if (h.length) { const q = document.createElement('div'); q.className = 't'; q.textContent = 'Hidden by your filters'; tip.append(q); }
+      if (window.cwHides(d).length) { const q = document.createElement('div'); q.className = 't'; q.textContent = 'Hidden in the cards by your filters'; tip.append(q); }
       tip.hidden = false;
       const bx = el.getBoundingClientRect(), r = ev.target.getBoundingClientRect();
       const left = Math.min(r.left - bx.left + 12, bx.width - 240);
@@ -641,7 +640,6 @@ dash.draw('scatter', (el) => {
       const right = x(mk) > W - 130;
       limText.attr('x', x(mk) + (right ? -6 : 6)).attr('text-anchor', right ? 'end' : 'start').text('Up to ' + d3.format('~s')(mk) + ' km');
     }
-    marks.attr('opacity', (d) => (window.cwHides(d).length ? 0.22 : 1));
   };
   paint();
   window.cwRefresh = (window.cwRefresh || []).filter((f) => f.tag !== 'scatter');
