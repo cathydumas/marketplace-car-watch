@@ -126,7 +126,7 @@
 
   <section id="market" class="cw-panel">
     <h2>Where today's cars sit</h2>
-    <p>Grey dots are asking prices across Canada. Shapes are today's BC cars: the shape is the call, the shade of blue is the model year (darker is newer). The shaded strip is your $15k to $22k budget and the dashed line is the km limit. Cars your filters hide are faded. Tap a shape for details.</p>
+    <p>Grey dots are asking prices across Canada. Shapes are today's BC cars: the shape is the call, the colour is the model year group. The shaded strip is your $15k to $22k budget and the dashed line is the km limit. Cars your filters hide are faded. Tap a shape for details.</p>
     <div class="cw-legend" data-draw="scatter-legend" data-source="listings"></div>
     <div class="cw-scatter" data-draw="scatter" data-source="comps listings"></div>
   </section>
@@ -475,7 +475,7 @@ barList('filtered', 'filtered', 'reason', () => false);
 </script>
 
 <script>
-// Scatter: shape = call, blue shade = model year (sequential, darker = newer on light, lighter = newer on dark).
+// Scatter: shape = call, colour = model year group (four categorical hues, validated for colour blindness in light and dark).
 const CW_SHAPE = { buy: d3.symbolTriangle, offer: d3.symbolDiamond, pass: d3.symbolCircle };
 const CW_CALLNAME = { buy: 'Buy', offer: 'Offer', pass: 'Pass' };
 const CW_YEARS = [
@@ -484,7 +484,7 @@ const CW_YEARS = [
   { label: '2018 to 2020', test: (y) => y >= 2018 && y <= 2021 },
   { label: '2022 on', test: (y) => y >= 2022 },
 ];
-const CW_RAMP = { light: ['#9ec5f4', '#3987e5', '#184f95', '#0a2a52'], dark: ['#184f95', '#3987e5', '#86b6ef', '#cde2fb'] };
+const CW_RAMP = { light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100'], dark: ['#3987e5', '#d95926', '#199e70', '#c98500'] };
 const cwIsDark = (el) => {
   const c = d3.color(getComputedStyle(el.closest('.cw-panel') || document.body).backgroundColor);
   if (!c || c.opacity === 0) return matchMedia('(prefers-color-scheme: dark)').matches;
