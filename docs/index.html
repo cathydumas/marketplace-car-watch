@@ -73,7 +73,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
   document.addEventListener('DOMContentLoaded', function () {
     redraw();
     Promise.all(ids.map(function (id) {
-      return fetch('data/' + id + '.json?v=20261111212850').then(function (r) { return r.json(); })
+      return fetch('data/' + id + '.json?v=20261111213056').then(function (r) { return r.json(); })
         .then(function (rows) { store[id] = { status: 'ok', data: rows }; })
         .catch(function () { store[id] = { status: 'error', data: [] }; });
     })).then(function () { redraw(); });
@@ -213,7 +213,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
 
   <section id="market" class="cw-panel">
     <h2>Where today's cars sit</h2>
-    <p>Grey dots are asking prices across Canada. Coloured dots are today's BC cars: filled if they match your filters, an empty ring if the filters hide them. The shaded strip is your $15k to $22k budget and the dashed line is the km limit. Tap a coloured dot for details, including the year.</p>
+    <p>Grey dots are asking prices across Canada. Coloured dots are today's BC cars: filled if they match your filters, an empty ring if the filters hide them. The shaded strip is your $15k to $22k budget and the dashed line is the km limit. Hover over a car for details, including the year. Click it to open the listing.</p>
     <div class="cw-legend" data-draw="scatter-legend" data-source="listings"></div>
     <div class="cw-scatter" data-draw="scatter" data-source="comps listings"></div>
   </section>
@@ -633,7 +633,9 @@ dash.draw('scatter', (el) => {
       const left = Math.min(r.left - bx.left + 12, bx.width - 240);
       tip.style.left = Math.max(0, left) + 'px'; tip.style.top = (r.top - bx.top + 12) + 'px';
     })
-    .on('mouseleave', () => { tip.hidden = true; });
+    .on('mouseleave', () => { tip.hidden = true; })
+    .on('click', (ev, d) => { if (d.url) window.open(d.url, '_blank', 'noopener'); });
+  marks.append('title').text((d) => d.title + ', ' + d.call + '. Click to open the listing.');
   const paint = () => {
     const mk = window.cwFilter.maxKm;
     const any = mk >= 250000 || mk > x.domain()[1];
