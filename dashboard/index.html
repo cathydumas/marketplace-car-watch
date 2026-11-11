@@ -126,7 +126,7 @@
 
   <section id="market" class="cw-panel">
     <h2>Where today's cars sit</h2>
-    <p>Grey dots are asking prices across Canada. Shapes are today's BC cars: the shape is the call, the colour is the model year group. The shaded strip is your $15k to $22k budget and the dashed line is the km limit. Cars your filters hide are faded. Tap a shape for details.</p>
+    <p>Grey dots are asking prices across Canada. Coloured dots are today's BC cars. The shaded strip is your $15k to $22k budget and the dashed line is the km limit. Cars your filters hide are faded. Tap a coloured dot for details, including the year.</p>
     <div class="cw-legend" data-draw="scatter-legend" data-source="listings"></div>
     <div class="cw-scatter" data-draw="scatter" data-source="comps listings"></div>
   </section>
@@ -475,50 +475,26 @@ barList('filtered', 'filtered', 'reason', () => false);
 </script>
 
 <script>
-// Scatter: shape = call, colour = model year group (four categorical hues, validated for colour blindness in light and dark).
-const CW_SHAPE = { buy: d3.symbolTriangle, offer: d3.symbolDiamond, pass: d3.symbolCircle };
-const CW_CALLNAME = { buy: 'Buy', offer: 'Offer', pass: 'Pass' };
-const CW_YEARS = [
-  { label: '2013 to 2014', test: (y) => y <= 2014 },
-  { label: '2015 to 2017', test: (y) => y >= 2015 && y <= 2017 },
-  { label: '2018 to 2020', test: (y) => y >= 2018 && y <= 2021 },
-  { label: '2022 on', test: (y) => y >= 2022 },
-];
-const CW_RAMP = { light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100'], dark: ['#3987e5', '#d95926', '#199e70', '#c98500'] };
-const cwIsDark = (el) => {
-  const c = d3.color(getComputedStyle(el.closest('.cw-panel') || document.body).backgroundColor);
-  if (!c || c.opacity === 0) return matchMedia('(prefers-color-scheme: dark)').matches;
-  return d3.hsl(c).l < 0.45;
-};
-const cwYearIdx = (y) => Math.max(0, CW_YEARS.findIndex((b) => b.test(y || 0)));
-const cwSym = (v, size) => d3.symbol(CW_SHAPE[v], size)();
-const CW_SIZE = { buy: 150, offer: 150, pass: 120 };
-
+// Scatter: circles coloured by the call, same colours as the card badges.
 dash.draw('scatter-legend', (el) => {
   el.replaceChildren();
-  const ramp = CW_RAMP[cwIsDark(el) ? 'dark' : 'light'];
-  const icon = (d, fill, stroke) => {
-    const svg = d3.create('svg').attr('width', 14).attr('height', 14).attr('viewBox', '-7 -7 14 14').attr('aria-hidden', 'true');
-    svg.append('path').attr('d', d).attr('fill', fill).attr('stroke', stroke || 'none').attr('stroke-width', 1.5);
-    return svg.node();
+  const { VCOLOR } = window.cwFmt;
+  const item = (bg, text, square) => {
+    const s = document.createElement('span'); const i = document.createElement('i');
+    i.style.background = bg; if (square) i.style.borderRadius = '2px';
+    s.append(i, document.createTextNode(text)); el.append(s);
   };
-  const grp = (title) => { const g = document.createElement('span'); g.className = 'grp'; const b = document.createElement('b'); b.textContent = title; g.append(b); el.append(g); return g; };
-  const g1 = grp('Call');
-  for (const v of ['buy', 'offer', 'pass']) { const s = document.createElement('span'); s.append(icon(cwSym(v, 70), 'none', 'var(--color-fg)'), document.createTextNode(CW_CALLNAME[v])); g1.append(s); }
-  const g2 = grp('Year');
-  CW_YEARS.forEach((b, i) => { const s = document.createElement('span'); s.append(icon(d3.symbol(d3.symbolSquare, 90)(), ramp[i]), document.createTextNode(b.label)); g2.append(s); });
-  const g3 = grp('Also');
-  const s1 = document.createElement('span'); s1.append(icon(d3.symbol(d3.symbolCircle, 30)(), 'var(--cds-chart-muted)'), document.createTextNode('Comparable listing')); g3.append(s1);
-  const s2 = document.createElement('span'); s2.append(icon('M-7,-4H7V4H-7Z', 'color-mix(in srgb, var(--cw-ok) 16%, transparent)'), document.createTextNode('Budget $15k to $22k')); g3.append(s2);
+  item(VCOLOR.buy, 'Buy'); item(VCOLOR.offer, 'Offer'); item(VCOLOR.pass, 'Pass');
+  item('var(--cds-chart-muted)', 'Comparable listing');
+  item('color-mix(in srgb, var(--cw-ok) 16%, transparent)', 'Budget $15k to $22k', true);
 });
 
 dash.draw('scatter', (el) => {
   const C = dash.data('comps');
   const L = dash.data('listings');
   if (C.status !== 'ok' || L.status !== 'ok') { el.replaceChildren(); el.textContent = '—'; return; }
-  const { fmtK, fmtKm } = window.cwFmt;
+  const { fmtK, fmtKm, VCOLOR } = window.cwFmt;
   el.replaceChildren();
-  const ramp = CW_RAMP[cwIsDark(el) ? 'dark' : 'light'];
   const comps = C.data.filter((r) => r.km != null && r.price != null);
   const cars = L.data.filter((r) => r.verdict !== 'Check price' && r.km != null && r.price != null);
   const W = Math.max(300, el.clientWidth || 600), H = 320;
@@ -551,10 +527,9 @@ dash.draw('scatter', (el) => {
   const limLine = lim.append('line').attr('y1', m.top).attr('y2', H - m.bottom).attr('stroke', 'var(--color-fg)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 4');
   const limText = lim.append('text').attr('y', m.top + 12).attr('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)');
   const tip = document.createElement('div'); tip.className = 'cw-tip'; tip.hidden = true; el.append(tip);
-  const marks = svg.append('g').selectAll('path').data(cars).join('path')
-    .attr('transform', (d) => `translate(${x(d.km)},${y(d.price)})`)
-    .attr('d', (d) => { const v = window.cwVerdict(d); return cwSym(v, CW_SIZE[v]); })
-    .attr('fill', (d) => ramp[cwYearIdx(d.year)]).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2)
+  const marks = svg.append('g').selectAll('circle').data(cars).join('circle')
+    .attr('cx', (d) => x(d.km)).attr('cy', (d) => y(d.price)).attr('r', 7)
+    .attr('fill', (d) => VCOLOR[window.cwVerdict(d)]).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2)
     .style('cursor', 'pointer')
     .on('mouseenter', (ev, d) => {
       tip.replaceChildren();
