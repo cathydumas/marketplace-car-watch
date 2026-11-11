@@ -73,7 +73,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
   document.addEventListener('DOMContentLoaded', function () {
     redraw();
     Promise.all(ids.map(function (id) {
-      return fetch('data/' + id + '.json?v=20261111212635').then(function (r) { return r.json(); })
+      return fetch('data/' + id + '.json?v=20261111212850').then(function (r) { return r.json(); })
         .then(function (rows) { store[id] = { status: 'ok', data: rows }; })
         .catch(function () { store[id] = { status: 'error', data: [] }; });
     })).then(function () { redraw(); });
@@ -213,7 +213,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
 
   <section id="market" class="cw-panel">
     <h2>Where today's cars sit</h2>
-    <p>Grey dots are asking prices across Canada. Coloured dots are today's BC cars. The shaded strip is your $15k to $22k budget and the dashed line is the km limit. Tap a coloured dot for details, including the year.</p>
+    <p>Grey dots are asking prices across Canada. Coloured dots are today's BC cars: filled if they match your filters, an empty ring if the filters hide them. The shaded strip is your $15k to $22k budget and the dashed line is the km limit. Tap a coloured dot for details, including the year.</p>
     <div class="cw-legend" data-draw="scatter-legend" data-source="listings"></div>
     <div class="cw-scatter" data-draw="scatter" data-source="comps listings"></div>
   </section>
@@ -572,6 +572,9 @@ dash.draw('scatter-legend', (el) => {
     s.append(i, document.createTextNode(text)); el.append(s);
   };
   item(VCOLOR.buy, 'Buy'); item(VCOLOR.offer, 'Offer'); item(VCOLOR.pass, 'Pass');
+  const ring = document.createElement('span'); const ri = document.createElement('i');
+  ri.style.background = 'transparent'; ri.style.boxShadow = 'inset 0 0 0 2px var(--color-fg-muted)';
+  ring.append(ri, document.createTextNode('Empty ring: hidden by your filters')); el.append(ring);
   item('var(--cds-chart-muted)', 'Comparable listing');
   item('color-mix(in srgb, var(--cw-ok) 16%, transparent)', 'Budget $15k to $22k', true);
 });
@@ -640,6 +643,13 @@ dash.draw('scatter', (el) => {
       const right = x(mk) > W - 130;
       limText.attr('x', x(mk) + (right ? -6 : 6)).attr('text-anchor', right ? 'end' : 'start').text('Up to ' + d3.format('~s')(mk) + ' km');
     }
+    // Filled = shown in the cards. Empty ring = hidden by your filters.
+    marks.each(function (d) {
+      const out = window.cwHides(d).length > 0, c = VCOLOR[window.cwVerdict(d)];
+      d3.select(this).attr('r', out ? 6 : 7).attr('fill', out ? 'var(--color-panel)' : c)
+        .attr('stroke', out ? c : 'var(--color-panel)').attr('stroke-width', out ? 2.5 : 2);
+    });
+    marks.filter((d) => !window.cwHides(d).length).raise();
   };
   paint();
   window.cwRefresh = (window.cwRefresh || []).filter((f) => f.tag !== 'scatter');
